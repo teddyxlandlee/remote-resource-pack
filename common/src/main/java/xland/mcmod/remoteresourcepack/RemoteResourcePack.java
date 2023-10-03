@@ -2,6 +2,7 @@ package xland.mcmod.remoteresourcepack;
 
 import com.google.gson.*;
 import dev.architectury.injectables.annotations.ExpectPlatform;
+import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.util.GsonHelper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,9 +16,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 public class RemoteResourcePack {
     public static final String MOD_ID = "remoteresourcepack";
@@ -107,17 +106,23 @@ public class RemoteResourcePack {
         final Map<String, Path> cacheFilesPerHash = new LinkedHashMap<>();
         try (var stream = Files.walk(modConfigDir)) {
             stream.forEach(path -> {
+                if (!Files.isRegularFile(path) || !path.toString().endsWith(".json")) return;
+
                 final JsonObject singleConfig;
                 try (BufferedReader reader = Files.newBufferedReader(path)) {
                     singleConfig = GsonHelper.parse(reader);
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
-                final HashableSingleSource source = HashableSingleSource.readFromJson(singleConfig);
+
                 try {
+                    final HashableSingleSource source = HashableSingleSource.readFromJson(singleConfig);
                     cacheFilesPerHash.put(source.getHash(), source.generate(repo));
+                    LOGGER.info("Generated pack {} from {}", source.getHash(), path);
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to parse config or generate pack from {}", path, e);
                 }
             });
         } catch (UncheckedIOException e) {
@@ -136,4 +141,11 @@ public class RemoteResourcePack {
     // <mod.jar>/RemoteResourcePack.json
     @ExpectPlatform
     static Map<String, Path> getModsBuiltinConfigs() { throw new AssertionError(); }
+
+    public static void insertEnabledPacks(PackRepository packRepository, Collection<String> packs) {
+        final Set<String> set = new LinkedHashSet<>();
+        set.addAll(packRepository.getSelectedIds());
+        set.addAll(packs);
+        packRepository.setSelected(set);
+    }
 }

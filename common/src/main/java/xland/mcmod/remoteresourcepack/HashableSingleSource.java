@@ -30,8 +30,9 @@ public final class HashableSingleSource {
         this.baseUrl = baseUrl;
         this.zipConfigUrl = zipConfigUrl;
         this.autoUpdate = autoUpdate;
-        this.hash = internalCalcSha256();
         this.args = args;
+
+        this.hash = internalCalcSha256();
     }
 
     public boolean exists(Path repo) {

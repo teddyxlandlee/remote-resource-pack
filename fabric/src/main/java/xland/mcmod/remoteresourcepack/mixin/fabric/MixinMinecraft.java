@@ -25,5 +25,6 @@ public abstract class MixinMinecraft {
         final PackRepository packRepository = this.remoteResourcePack$getResourcePackRepository();
         ((MutablePackRepository) packRepository).remoteResourcePack$addRepoSource(
                 new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles()));
+        RemoteResourcePack.insertEnabledPacks(packRepository, RemoteResourcePack.getCacheFiles().keySet());
     }
 }

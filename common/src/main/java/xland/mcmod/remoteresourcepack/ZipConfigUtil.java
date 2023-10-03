@@ -21,7 +21,7 @@ import static net.minecraft.util.GsonHelper.*;
 final class ZipConfigUtil {
     private ZipConfigUtil() {}
     private static final Base64.Decoder B64DECODER = Base64.getDecoder();
-    private static final ThreadLocal<RandomGenerator> RANDOM = ThreadLocal.withInitial(RandomGenerator::getDefault);
+    private static final ThreadLocal<RandomGenerator> RANDOM = ThreadLocal.withInitial(java.util.Random::new);
 
     private static void addFileToZip(ZipOutputStream zos, String filename,
                                      JsonObject data, URL baseUrl)
@@ -83,8 +83,8 @@ final class ZipConfigUtil {
                     }
                 }
 
+                final JsonArray items = getAsJsonArray(dynamicData, "items");
                 if (paramValue < 0) {   // is random
-                    final JsonArray items = getAsJsonArray(dynamicData, "items");
                     final String errDesc = "dynamic." + dynArgEntry.getKey() + ".items";
 
                     int totalWeight = 0;
@@ -111,7 +111,6 @@ final class ZipConfigUtil {
                         }
                     }
                 } else {
-                    final JsonArray items = convertToJsonArray(dynamicData, "items");
                     if (paramValue < items.size()) {    // index in bounds
                         final JsonObject files = getAsJsonObject(convertToJsonObject(items.get(paramValue),
                                 "dynamic." + dynArgEntry.getKey() + ".items." + paramValue), "files");
