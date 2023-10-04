@@ -1,6 +1,5 @@
 package xland.mcmod.remoteresourcepack.forge;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.server.packs.PackType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.AddPackFindersEvent;
@@ -15,6 +14,6 @@ public class RRPEventListeners {
     public static void addRepoSource(AddPackFindersEvent event) {
         if (event.getPackType() != PackType.CLIENT_RESOURCES) return;
         event.addRepositorySource(new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles()));
-        RemoteResourcePack.insertEnabledPacks(Minecraft.getInstance().getResourcePackRepository(), RemoteResourcePack.getCacheFiles().keySet());
+//        RemoteResourcePack.insertEnabledPacks(Minecraft.getInstance().getResourcePackRepository());
     }
 }

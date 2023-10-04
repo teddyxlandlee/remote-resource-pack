@@ -2,6 +2,8 @@ package xland.mcmod.remoteresourcepack;
 
 import com.google.gson.*;
 import dev.architectury.injectables.annotations.ExpectPlatform;
+import net.minecraft.client.Minecraft;
+import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.util.GsonHelper;
 import org.apache.logging.log4j.LogManager;
@@ -26,6 +28,7 @@ public class RemoteResourcePack {
 
     private static volatile Map<String, Path> cacheFiles;
 
+    @DontObfuscate  // invoked by Fabric entrypoint
     public static void init() {
         final Path repo = getGameDir().resolve("RemoteResourcePack");
         LOGGER.info(MARKER, "Scanning builtin mod config");
@@ -142,10 +145,20 @@ public class RemoteResourcePack {
     @ExpectPlatform
     static Map<String, Path> getModsBuiltinConfigs() { throw new AssertionError(); }
 
-    public static void insertEnabledPacks(PackRepository packRepository, Collection<String> packs) {
+    @DontObfuscate  // invoked by Forge coremod
+    public static void insertEnabledPacks(PackRepository packRepository) {
         final Set<String> set = new LinkedHashSet<>();
+        final List<String> remotePackNames = getCacheFiles().keySet().stream().map(s -> "RemoteResourcePack/" + s).toList();
+
         set.addAll(packRepository.getSelectedIds());
-        set.addAll(packs);
+        set.addAll(remotePackNames);
+//        LOGGER.info("Available-1: {}", packRepository.getSelectedIds());
         packRepository.setSelected(set);
+//        LOGGER.info("Available-2: {}", packRepository.getSelectedIds());
+        final List<String> optionsResourcePacks = Minecraft.getInstance().options.resourcePacks;
+        remotePackNames.forEach(s -> {
+            if (!optionsResourcePacks.contains(s))
+                optionsResourcePacks.add(s);
+        });
     }
 }
