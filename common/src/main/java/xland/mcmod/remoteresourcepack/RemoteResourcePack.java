@@ -145,7 +145,8 @@ public class RemoteResourcePack {
     @ExpectPlatform
     static Map<String, Path> getModsBuiltinConfigs() { throw new AssertionError(); }
 
-    @DontObfuscate  // invoked by Forge coremod
+    @DontObfuscate  // invoked by Forge coremod and Fabric ASM
+    @SuppressWarnings("unused")
     public static void insertEnabledPacks(PackRepository packRepository) {
         final Set<String> set = new LinkedHashSet<>();
         final List<String> remotePackNames = getCacheFiles().keySet().stream().map(s -> "RemoteResourcePack/" + s).toList();

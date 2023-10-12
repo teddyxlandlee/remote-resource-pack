@@ -7,6 +7,7 @@
     "MixinMinecraft",
     "MixinPackRepository"
   ],
+  "plugin": "xland.mcmod.remoteresourcepack.fabric.asm.RRPMixinPlugin",
   "injectors": {
     "defaultRequire": 1
   }
