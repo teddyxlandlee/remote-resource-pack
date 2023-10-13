@@ -22,10 +22,13 @@ final class ZipConfigUtil {
     private ZipConfigUtil() {}
     private static final Base64.Decoder B64DECODER = Base64.getDecoder();
     private static final ThreadLocal<RandomGenerator> RANDOM = ThreadLocal.withInitial(java.util.Random::new);
+    private static final String SKIP_KEY = "mod";
 
     private static void addFileToZip(ZipOutputStream zos, String filename,
                                      JsonObject data, URL baseUrl)
             throws IOException {
+        if (shouldSkip(data)) return;
+
         zos.putNextEntry(new ZipEntry(filename));
         if (!filename.endsWith("/")) {  // otherwise is directory
             if (isStringValue(data, "fetch")) {
@@ -41,6 +44,22 @@ final class ZipConfigUtil {
             }   // else: put an empty entry
         }
         zos.closeEntry();
+    }
+
+    private static boolean shouldSkip(JsonObject data) {
+        JsonElement e = data.get("skip_on");
+        if (e == null) return false;    // non-exist
+        if (isStringValue(e)) {
+            return SKIP_KEY.equalsIgnoreCase(e.getAsString());
+        }
+        if (e.isJsonArray()) {
+            for (JsonElement arrayElement : e.getAsJsonArray()) {
+                if (!isStringValue(arrayElement)) continue;
+                if (SKIP_KEY.equalsIgnoreCase(arrayElement.getAsString()))
+                    return true;
+            }
+        }
+        return false;
     }
 
     static void generateZip(JsonObject zipConfig, URL baseUrl,

@@ -21,7 +21,9 @@ record MethodInfo(String owner, String name, String desc) {
     public static MethodInfo ofFabric(String ownerInt, String nameInt, String descInt) {
         final MappingResolver resolver = MAPPING_RESOLVER.get();
         final String owner = mapObjectType(ownerInt);
-        final String name = resolver.mapMethodName(INTERMEDIARY, ownerInt, nameInt, descInt);
+        final String name = resolver.mapMethodName(INTERMEDIARY,
+                ownerInt.charAt(0) == '[' ? ownerInt : ownerInt.replace('/', '.'),
+                nameInt, descInt);
         final String desc = mapType(Type.getMethodType(descInt)).getDescriptor();
         return new MethodInfo(owner, name, desc);
     }

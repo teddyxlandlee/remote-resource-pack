@@ -13,8 +13,8 @@ public interface MutablePackRepository {
     void remoteResourcePack$addRepoSource(RepositorySource repositorySource);
 
     @DontObfuscate
-    @SuppressWarnings("unused")
-    static void hookAddRepoSource(PackRepository repository) {
+    @SuppressWarnings("unused") // used in
+    static void hookAddPackSource(PackRepository repository) {
         ((MutablePackRepository) repository).remoteResourcePack$addRepoSource(
                 new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles())
         );

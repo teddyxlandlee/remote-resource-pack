@@ -55,6 +55,7 @@ public class RemoteResourcePack {
         // load configs from mods
         LOGGER.info(MARKER, "Loading config");
         final Path modConfigDir = getModConfigDir().toAbsolutePath().normalize();
+        Files.createDirectories(modConfigDir);
         final Map<String, JsonObject> toBeWritten = new LinkedHashMap<>();
         {
             final Map<String, String> path2modCache = new LinkedHashMap<>();

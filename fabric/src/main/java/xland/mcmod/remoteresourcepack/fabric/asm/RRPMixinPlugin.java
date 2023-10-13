@@ -49,7 +49,8 @@ public class RRPMixinPlugin implements IMixinConfigPlugin {
             target_PackRepository_reload.findFirstInvocation(
                     instructions, Opcodes.INVOKEVIRTUAL).ifPresentOrElse(invokeReload -> {
                         InsnList before = new InsnList();
-                        before.add(new InsnNode(Opcodes.DUP2));
+                        before.add(new InsnNode(Opcodes.DUP));
+                        before.add(new InsnNode(Opcodes.DUP));
                         before.add(hook_MutablePackRepository_hookAddPackSource.toInstruction(Opcodes.INVOKESTATIC, true));
 
                         InsnList after = new InsnList();
