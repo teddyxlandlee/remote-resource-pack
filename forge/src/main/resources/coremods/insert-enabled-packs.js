@@ -1,3 +1,4 @@
+// @deprecation: not ever required
 var ASMAPI = Java.type('net.minecraftforge.coremod.api.ASMAPI')
 var Opcodes = Java.type('org.objectweb.asm.Opcodes')
 var InsnList = Java.type('org.objectweb.asm.tree.InsnList')

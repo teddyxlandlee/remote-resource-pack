@@ -13,7 +13,7 @@ public interface MutablePackRepository {
     void remoteResourcePack$addRepoSource(RepositorySource repositorySource);
 
     @DontObfuscate
-    @SuppressWarnings("unused") // used in
+    @SuppressWarnings("unused") // used in RRPMixinPlugin
     static void hookAddPackSource(PackRepository repository) {
         ((MutablePackRepository) repository).remoteResourcePack$addRepoSource(
                 new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles())

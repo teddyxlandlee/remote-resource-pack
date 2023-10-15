@@ -16,8 +16,7 @@ import java.util.Set;
 public class RRPMixinPlugin implements IMixinConfigPlugin {
     private MethodInfo
             target_PackRepository_reload,
-            hook_MutablePackRepository_hookAddPackSource,
-            hook_RemoteResourcePack_insertEnabledPacks;
+            hook_MutablePackRepository_hookAddPackSource;
     private static final Logger LOGGER = LoggerFactory.getLogger(RRPMixinPlugin.class);
 
     @Override
@@ -32,11 +31,11 @@ public class RRPMixinPlugin implements IMixinConfigPlugin {
                 "hookAddPackSource",
                 "(Lnet/minecraft/class_3283;)V"
         );
-        hook_RemoteResourcePack_insertEnabledPacks = MethodInfo.ofHook(
-                "xland/mcmod/remoteresourcepack/RemoteResourcePack",
-                "insertEnabledPacks",
-                "(Lnet/minecraft/class_3283;)V"
-        );
+//        hook_RemoteResourcePack_insertEnabledPacks = MethodInfo.ofHook(
+//                "xland/mcmod/remoteresourcepack/RemoteResourcePack",
+//                "insertEnabledPacks",
+//                "(Lnet/minecraft/class_3283;)V"
+//        );
     }
 
     void parseMixinMinecraft(ClassNode node) {
@@ -54,7 +53,8 @@ public class RRPMixinPlugin implements IMixinConfigPlugin {
                         before.add(hook_MutablePackRepository_hookAddPackSource.toInstruction(Opcodes.INVOKESTATIC, true));
 
                         InsnList after = new InsnList();
-                        after.add(hook_RemoteResourcePack_insertEnabledPacks.toInstruction(Opcodes.INVOKESTATIC, false));
+//                        after.add(hook_RemoteResourcePack_insertEnabledPacks.toInstruction(Opcodes.INVOKESTATIC, false));
+                        after.add(new InsnNode(Opcodes.POP));   // since 1.19.3 we don't need to insert it by mixin
 
                         instructions.insertBefore(invokeReload, before);
                         instructions.insert(invokeReload, after);

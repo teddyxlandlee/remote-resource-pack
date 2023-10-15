@@ -3,26 +3,34 @@ package xland.mcmod.remoteresourcepack;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.mojang.bridge.game.PackType;
+import net.minecraft.ChatFormatting;
 import net.minecraft.DetectedVersion;
-import net.minecraft.server.packs.FilePackResources;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.packs.PathPackResources;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.repository.RepositorySource;
+import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.util.GsonHelper;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.function.Consumer;
 
 public class RRPCacheRepoSource implements RepositorySource {
     // Description: `%s (Remote cache)`
-    private static final PackSource PACK_SOURCE = PackSource.decorating("pack.source.mod.remoteresourcepack");
+    private static final PackSource PACK_SOURCE = PackSource.create(component2 ->
+            Component.translatable("pack.nameAndSource",
+                    component2,
+                    Component.translatable("pack.source.mod.remoteresourcepack")
+            ).withStyle(ChatFormatting.GRAY), /*loadedOnStart=*/true);
+
     private static final Gson GSON = new Gson();    // for autogen pack.mcmeta
 
     private final Map<String, Path> knownCaches;
@@ -32,57 +40,56 @@ public class RRPCacheRepoSource implements RepositorySource {
     }
 
     @Override
-    public void loadPacks(Consumer<Pack> consumer, Pack.PackConstructor packConstructor) {
+    public void loadPacks(Consumer<Pack> consumer) {
         for (Map.Entry<String, Path> entry : knownCaches.entrySet()) {
-            File file = pathToFile(entry.getValue());
-            Pack pack = Pack.create(
-                    "RemoteResourcePack/" + entry.getKey(),
+            String packId = "RemoteResourcePack/" + entry.getKey();
+            Pack pack = Pack.readMetaAndCreate(
+                    packId,
+                    Component.translatable("pack.source.mod.remoteresourcepack")
+                            .append(" #")
+                            .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27))),
                     /*required=*/false,
-                    () -> new FilePackResources(file) {
+                    (String packName) -> new PathPackResources(packName, entry.getValue(), false) {
                         private static final JsonObject STUB_OBJ = new JsonObject();
                         private byte[] packMcmetaModified;
+                        private static final String[] packMcmeta = {"pack.mcmeta"};
 
+                        @Nullable
                         @Override
-                        protected @NotNull InputStream getResource(String path) throws IOException {
+                        public IoSupplier<InputStream> getRootResource(String... strings) {
+                            return Arrays.equals(packMcmeta, strings) ? getPackMeta() : super.getRootResource(strings);
+                        }
+
+                        @NotNull
+                        private IoSupplier<InputStream> getPackMeta() {
                             // here throws FNF if pack.mcmeta not found
-                            final InputStream parentStream = super.getResource(path);
-                            if (!"pack.mcmeta".equals(path)) return parentStream;
+                            final IoSupplier<InputStream> rootResource = super.getRootResource("pack.mcmeta");
+                            if (rootResource == null)
+                                return () -> {
+                                    throw new FileNotFoundException(entry.getKey() + "/pack.mcmeta");
+                                };
+                            return () -> {
+                                if (packMcmetaModified == null) {
+                                    JsonObject obj = GsonHelper.parse(new InputStreamReader(rootResource.get()));
+                                    final int packVersion = DetectedVersion.BUILT_IN.getPackVersion(PackType.RESOURCE);
 
-                            if (packMcmetaModified == null) {
-                                JsonObject obj = GsonHelper.parse(new InputStreamReader(parentStream));
-                                final int packVersion = DetectedVersion.BUILT_IN.getPackVersion(PackType.RESOURCE);
+                                    final JsonObject pack1 = GsonHelper.getAsJsonObject(obj, "pack", STUB_OBJ);
+                                    if (GsonHelper.getAsInt(pack1, "pack_format", -1) != packVersion)
+                                        RemoteResourcePack.LOGGER.warn("Remote pack {} has invalid pack_format", entry.getKey());
+                                    // overwrite pack_format in case marked as incompatible and refused to enable
+                                    pack1.addProperty("pack_format", packVersion);
 
-                                final JsonObject pack1 = GsonHelper.getAsJsonObject(obj, "pack", STUB_OBJ);
-                                if (GsonHelper.getAsInt(pack1, "pack_format", -1) != packVersion)
-                                    RemoteResourcePack.LOGGER.warn("Remote pack {} has invalid pack_format", entry.getKey());
-                                // overwrite pack_format in case marked as incompatible and refused to enable
-                                pack1.addProperty("pack_format", packVersion);
-
-                                packMcmetaModified = GSON.toJson(obj).getBytes(StandardCharsets.UTF_8);
-                            }
-                            return new ByteArrayInputStream(packMcmetaModified);
+                                    packMcmetaModified = GSON.toJson(obj).getBytes(StandardCharsets.UTF_8);
+                                }
+                                return new ByteArrayInputStream(packMcmetaModified);
+                            };
                         }
                     },
-                    packConstructor,
+                    net.minecraft.server.packs.PackType.CLIENT_RESOURCES,
                     Pack.Position.TOP,
                     PACK_SOURCE
             );
             consumer.accept(pack);
-        }
-    }
-
-    private static File pathToFile(Path path) {
-        try {
-            return path.toFile();
-        } catch (UnsupportedOperationException e) {
-            try {
-                File file = File.createTempFile("RemoteResourcePack", ".zip");
-                file.deleteOnExit();
-                Files.copy(path, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                return file;
-            } catch (IOException ex) {
-                throw new RuntimeException("Failed to copy " + path, ex);
-            }
         }
     }
 }
