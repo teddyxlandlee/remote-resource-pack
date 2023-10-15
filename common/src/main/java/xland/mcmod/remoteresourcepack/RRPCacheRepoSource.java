@@ -2,10 +2,10 @@ package xland.mcmod.remoteresourcepack;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.mojang.bridge.game.PackType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.DetectedVersion;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.PathPackResources;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
@@ -74,7 +74,7 @@ public class RRPCacheRepoSource implements RepositorySource {
                             return () -> {
                                 if (packMcmetaModified == null) {
                                     JsonObject obj = GsonHelper.parse(new InputStreamReader(rootResource.get()));
-                                    final int packVersion = DetectedVersion.BUILT_IN.getPackVersion(PackType.RESOURCE);
+                                    final int packVersion = DetectedVersion.BUILT_IN.getPackVersion(PackType.CLIENT_RESOURCES);
 
                                     final JsonObject pack1 = GsonHelper.getAsJsonObject(obj, "pack", STUB_OBJ);
                                     if (GsonHelper.getAsInt(pack1, "pack_format", -1) != packVersion)
