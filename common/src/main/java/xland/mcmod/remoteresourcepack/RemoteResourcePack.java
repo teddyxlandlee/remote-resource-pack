@@ -146,21 +146,21 @@ public class RemoteResourcePack {
     @ExpectPlatform
     static Map<String, Path> getModsBuiltinConfigs() { throw new AssertionError(); }
 
-//    @DontObfuscate  // invoked by Forge coremod and Fabric ASM
-//    @SuppressWarnings("unused")
-//    public static void insertEnabledPacks(PackRepository packRepository) {
-//        final Set<String> set = new LinkedHashSet<>();
-//        final List<String> remotePackNames = getCacheFiles().keySet().stream().map(s -> "RemoteResourcePack/" + s).toList();
-//
-//        set.addAll(packRepository.getSelectedIds());
-//        set.addAll(remotePackNames);
-////        LOGGER.info("Available-1: {}", packRepository.getSelectedIds());
-//        packRepository.setSelected(set);
-////        LOGGER.info("Available-2: {}", packRepository.getSelectedIds());
-//        final List<String> optionsResourcePacks = Minecraft.getInstance().options.resourcePacks;
-//        remotePackNames.forEach(s -> {
-//            if (!optionsResourcePacks.contains(s))
-//                optionsResourcePacks.add(s);
-//        });
-//    }
+    @DontObfuscate  // invoked by Forge coremod and Fabric ASM
+    @SuppressWarnings("unused")
+    public static void insertEnabledPacks(PackRepository packRepository) {
+        final Set<String> set = new LinkedHashSet<>();
+        final List<String> remotePackNames = getCacheFiles().keySet().stream().map(s -> "RemoteResourcePack/" + s).toList();
+
+        set.addAll(packRepository.getSelectedIds());
+        set.addAll(remotePackNames);
+//        LOGGER.info("Available-1: {}", packRepository.getSelectedIds());
+        packRepository.setSelected(set);
+//        LOGGER.info("Available-2: {}", packRepository.getSelectedIds());
+        final List<String> optionsResourcePacks = Minecraft.getInstance().options.resourcePacks;
+        remotePackNames.forEach(s -> {
+            if (!optionsResourcePacks.contains(s))
+                optionsResourcePacks.add(s);
+        });
+    }
 }

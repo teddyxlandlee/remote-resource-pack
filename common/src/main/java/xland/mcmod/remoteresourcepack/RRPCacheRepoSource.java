@@ -17,6 +17,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
@@ -43,13 +45,14 @@ public class RRPCacheRepoSource implements RepositorySource {
     public void loadPacks(Consumer<Pack> consumer) {
         for (Map.Entry<String, Path> entry : knownCaches.entrySet()) {
             String packId = "RemoteResourcePack/" + entry.getKey();
+            final FileSystem zipFS = readZip(entry.getValue());
             Pack pack = Pack.readMetaAndCreate(
                     packId,
                     Component.translatable("pack.source.mod.remoteresourcepack")
                             .append(" #")
                             .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27))),
                     /*required=*/false,
-                    (String packName) -> new PathPackResources(packName, entry.getValue(), false) {
+                    (String packName) -> new PathPackResources(packName, zipFS.getPath("/"), false) {
                         private static final JsonObject STUB_OBJ = new JsonObject();
                         private byte[] packMcmetaModified;
                         private static final String[] packMcmeta = {"pack.mcmeta"};
@@ -84,12 +87,26 @@ public class RRPCacheRepoSource implements RepositorySource {
                                 return new ByteArrayInputStream(packMcmetaModified);
                             };
                         }
+
+                        @Override
+                        public void close() {
+                            super.close();
+//                            IOUtils.closeQuietly(zipFS);
+                        }
                     },
                     net.minecraft.server.packs.PackType.CLIENT_RESOURCES,
                     Pack.Position.TOP,
                     PACK_SOURCE
             );
             consumer.accept(pack);
+        }
+    }
+
+    private static FileSystem readZip(Path zipFile) {
+        try {
+            return FileSystems.newFileSystem(zipFile);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }
