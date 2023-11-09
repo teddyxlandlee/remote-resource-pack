@@ -53,7 +53,7 @@ public class RRPCacheRepoSource implements RepositorySource {
                             .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27))),
                     /*required=*/false,
                     new Pack.ResourcesSupplier() {
-                        private final Path rootDir = zipFS.getPath("/");;
+                        private final Path rootDir = zipFS.getPath("/");
 
                         public @NotNull PackResources openPrimary(@NotNull String packName) {
                             return new PathPackResources(packName, rootDir, false) {
