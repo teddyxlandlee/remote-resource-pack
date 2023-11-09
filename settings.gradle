@@ -10,3 +10,4 @@ pluginManagement {
 include("common")
 include("fabric")
 include("forge")
+//include("neo")    // Since architectury isn't well-prepared for Neo, let's use NG first

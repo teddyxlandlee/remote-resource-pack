@@ -28,14 +28,14 @@ function initializeCoreMod() {
 				ASMAPI.insertInsnList(	// before
 					method, ASMAPI.MethodType.VIRTUAL,
 					'net/minecraft/server/packs/repository/PackRepository',
-					ASMAPI.mapMethod('m_10506_'),
+					ASMAPI.mapMethod('m_10506_'),	// reload
 					'()V',
 					before, ASMAPI.InsertMode.INSERT_BEFORE
 				)
 				ASMAPI.insertInsnList(	// after
 					method, ASMAPI.MethodType.VIRTUAL,
 					'net/minecraft/server/packs/repository/PackRepository',
-					ASMAPI.mapMethod('m_10506_'),
+					ASMAPI.mapMethod('m_10506_'),	// reload
 					'()V',
 					after, ASMAPI.InsertMode.INSERT_AFTER
 				)

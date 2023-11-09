@@ -1,6 +1,6 @@
 plugins {
     id "architectury-plugin" version "3.4-SNAPSHOT"
-    id "dev.architectury.loom" version "1.1-SNAPSHOT" apply false
+    id "dev.architectury.loom" version "1.4-SNAPSHOT" apply false
     id 'io.github.juuxel.loom-vineflower' version '1.11.0' apply false
 }
 
@@ -8,9 +8,13 @@ architectury {
     minecraft = rootProject.minecraft_version
 }
 
-subprojects {
+def useNeoGradle = Boolean.valueOf(rootProject.use_neo_gradle)
+
+subprojects { Project p ->
+    if (useNeoGradle && "neo" == p.name) return
+
     apply plugin: "dev.architectury.loom"
-    apply plugin: "io.github.juuxel.loom-vineflower"
+    //apply plugin: "io.github.juuxel.loom-vineflower"
 
     loom {
         silentMojangMappingsLicense()
@@ -43,9 +47,9 @@ allprojects {
         maven { url 'https://maven.aliyun.com/repository/public' }
     }
 
-    tasks.withType(JavaCompile) {
+    tasks.withType(JavaCompile).configureEach {
         options.encoding = "UTF-8"
-        options.release = 17
+        options.release.set 17
     }
 
     java {

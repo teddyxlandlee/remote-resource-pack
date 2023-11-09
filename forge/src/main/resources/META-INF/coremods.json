@@ -1,3 +1,4 @@
 {
+  "rrp-lexforge-deprecation-screen": "coremods/deprecation.js",
   "insert_enabled_packs": "coremods/insert-enabled-packs.js"
 }
