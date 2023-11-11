@@ -14,7 +14,7 @@ function initializeCoreMod() {
 			},
 			'transformer': function (method) {
 				var listSupplier = function () {
-					InsnList list = new InsnList();
+					var list = new InsnList();
 					list.add(new VarInsnNode(Opcodes.ALOAD, 1));    // the list
 					list.add(ASMAPI.buildMethodCall(
 							"xland/mcmod/remoteresourcepack/forge/NeoMigrationWarningScreen",
