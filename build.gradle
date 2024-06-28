@@ -2,6 +2,7 @@ plugins {
     id "architectury-plugin" version "3.4-SNAPSHOT"
     id "dev.architectury.loom" version "1.6-SNAPSHOT" apply false
     //id 'io.github.juuxel.loom-vineflower' version '1.11.0' apply false
+    id "com.modrinth.minotaur" version "2.+" apply false
 }
 
 architectury {
@@ -16,6 +17,10 @@ subprojects { Project p ->
     apply plugin: "dev.architectury.loom"
     //apply plugin: "io.github.juuxel.loom-vineflower"
 
+    base {
+        archivesName = rootProject.archives_base_name + '-' + project.name
+    }
+
     loom {
         silentMojangMappingsLicense()
     }
@@ -25,11 +30,11 @@ subprojects { Project p ->
         // The following line declares the mojmap mappings, you may use other mappings as well
         //mappings loom.officialMojangMappings()
         mappings loom.layered {
-            if (project.name == 'forge') {
+            if ('forge'.equals(project.name)) {
                 mappings(rootProject.file('forgefix.tiny'))
             }
             officialMojangMappings()
-            if (project.name == 'forge') {
+            if ('forge'.equals(project.name)) {
                 mappings(rootProject.file('forgefix.tiny'))
             }
         }
@@ -43,7 +48,6 @@ allprojects {
     apply plugin: "architectury-plugin"
     apply plugin: "maven-publish"
 
-    archivesBaseName = rootProject.archives_base_name
     version = rootProject.mod_version
     group = rootProject.maven_group
 
@@ -64,5 +68,35 @@ allprojects {
 
     java {
         withSourcesJar()
+    }
+}
+
+subprojects {
+    if (!'common'.equals(project.name) && System.getenv("MR_TOKEN")) {
+        apply plugin: 'com.modrinth.minotaur'
+        def modLoaders = project.mr_loader.toString().split(",") as List
+        modrinth {
+            token.set System.getenv("MR_TOKEN")
+            projectId.set rootProject.mr_project_id
+            versionNumber.set "${project.version}-${modLoaders[0]}"
+            versionName.set String.format(
+                    /*format=*/rootProject.mr_version_name_format.toString(),
+                    rootProject.mr_version_game_range,
+                    project.mr_loader_display,
+                    rootProject.mr_version_mod_abbr,
+                    rootProject.mr_version_display
+            )
+            changelog.set rootProject.mr_version_changelog
+            versionType.set rootProject.mr_version_type
+            gameVersions = rootProject.mr_version_game.toString().split(",") as List
+            loaders.set modLoaders
+            detectLoaders.set false
+            autoAddDependsOn.set false
+
+            uploadFile.set tasks.remapJar
+            additionalFiles = [tasks.remapSourcesJar]
+
+            debugMode = System.getenv("MR_DEBUG_MODE") == '1'
+        }
     }
 }

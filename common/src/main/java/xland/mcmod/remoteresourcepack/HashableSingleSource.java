@@ -132,17 +132,6 @@ public final class HashableSingleSource {
         return of(baseUrl, zipConfigUrl, autoUpdate, args);
     }
 
-    /*public static HashableSingleSource readFromBinary(DataInput input) throws IOException {
-        byte b;
-        if ((b = input.readByte()) != schemaVersion)
-            throw schemaMismatch(b);
-
-        final URL baseUrl = new URL(input.readUTF());
-        final URL zipConfigUrl = new URL(input.readUTF());
-
-        return new HashableSingleSource(baseUrl, zipConfigUrl, readDuration(input));
-    }*/
-
     private static IOException schemaMismatch(int b) {
         return new java.io.InvalidObjectException(String.format(
                 "Invalid schema version: expected %d, got %d",
@@ -155,21 +144,10 @@ public final class HashableSingleSource {
         return old;
     }
 
-    /*private static Duration canonicalizeDuration(long sec, int nano) {
-        if (sec < 0) return Duration.ofSeconds(-1L);
-        return Duration.ofSeconds(sec, nano);
-    }*/
-
     private static void writeDuration(DataOutput output, Duration duration) throws IOException {
         output.writeLong(duration.getSeconds());
         output.writeInt(duration.getNano());
     }
-
-    /*private static Duration readDuration(DataInput input) throws IOException {
-        final long sec = input.readLong();
-        final int nanos = input.readInt();
-        return canonicalizeDuration(sec, nanos);
-    }*/
 
     private static Instant readInstant(DataInput input) throws IOException {
         final long sec = input.readLong();

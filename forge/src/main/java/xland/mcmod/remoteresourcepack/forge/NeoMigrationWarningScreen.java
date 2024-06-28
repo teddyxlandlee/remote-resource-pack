@@ -1,11 +1,14 @@
 package xland.mcmod.remoteresourcepack.forge;
 
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.layouts.Layout;
+import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.WarningScreen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.obfuscate.DontObfuscate;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.function.Function;
@@ -29,16 +32,17 @@ public class NeoMigrationWarningScreen extends WarningScreen {
     }
 
     @Override
-    protected void initButtons(int i) {
+    protected @NotNull Layout addFooterButtons() {
         assert this.minecraft != null;
-        this.addRenderableWidget(Button.builder(TAKE_ME_TO_NEO, (arg) -> {
+        var layout = LinearLayout.horizontal().spacing(8);
+        layout.addChild(Button.builder(TAKE_ME_TO_NEO, (arg) -> {
             // open the website
             net.minecraft.Util.getPlatform().openUri(NEO_SITE);
-        }).bounds(this.width / 2 - 155, 100 + i, 150, 20).build());
-        this.addRenderableWidget(Button.builder(
-                CommonComponents.GUI_BACK, (arg) -> onClose()
-                ).bounds(this.width / 2 - 155 + 160, 100 + i, 150, 20).build()
+        }).build());
+        layout.addChild(Button.builder(
+                CommonComponents.GUI_PROCEED, (arg) -> onClose()).build()
         );
+        return layout;
     }
 
     @Override
