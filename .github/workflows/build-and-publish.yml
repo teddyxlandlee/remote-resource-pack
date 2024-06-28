@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - neo
+  workflow_dispatch:
 
 jobs:
   build:
