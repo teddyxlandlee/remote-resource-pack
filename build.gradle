@@ -44,7 +44,7 @@ subprojects { Project p ->
 }
 
 allprojects {
-    apply plugin: "java"
+    apply plugin: 'java'
     apply plugin: "architectury-plugin"
     apply plugin: "maven-publish"
 
