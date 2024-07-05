@@ -10,6 +10,12 @@ architectury {
     common("fabric", "forge", "neoforge")
 }
 
+loom {
+	mixin {
+		defaultRefmapName = "rrp.refmap.json"
+	}
+}
+
 publishing {
     publications {
         mavenCommon(MavenPublication) {
