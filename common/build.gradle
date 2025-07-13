@@ -7,7 +7,13 @@ dependencies {
 }
 
 architectury {
-    common("fabric", "neoforge")
+    common("fabric", "forge", "neoforge")
+}
+
+loom {
+	mixin {
+		defaultRefmapName = "rrp.refmap.json"
+	}
 }
 
 publishing {
