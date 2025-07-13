@@ -14,16 +14,18 @@ function initializeCoreMod() {
                                 'methodDesc': '(Lnet/minecraft/client/main/GameConfig;)V'
                         },
                         'transformer': function(method) {
-                                var before = new InsnList()
-                                before.add(new InsnNode(Opcodes.DUP))        // dup a PackRepository
+                                var before = ASMAPI.listOf(
+                                    new InsnNode(Opcodes.DUP),          // dup a PackRepository
+                                )
 
-                                var after = new InsnList()
-                                after.add(ASMAPI.buildMethodCall(        // already have a PackRepository in stack
-                                        'xland/mcmod/remoteresourcepack/RemoteResourcePack',
-                                        'insertEnabledPacks',
-                                        '(Lnet/minecraft/server/packs/repository/PackRepository;)V',
-                                        ASMAPI.MethodType.STATIC
-                                ))
+                                var after = ASMAPI.listOf(
+                                    ASMAPI.buildMethodCall(             // already have a PackRepository in stack
+                                            'xland/mcmod/remoteresourcepack/RemoteResourcePack',
+                                            'insertEnabledPacks',
+                                            '(Lnet/minecraft/server/packs/repository/PackRepository;)V',
+                                            ASMAPI.MethodType.STATIC
+                                    ),
+                                )
 
                                 ASMAPI.insertInsnList(        // before
                                         method, ASMAPI.MethodType.VIRTUAL,

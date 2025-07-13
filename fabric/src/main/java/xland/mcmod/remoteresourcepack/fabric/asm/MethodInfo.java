@@ -4,6 +4,7 @@ import com.google.common.base.Suppliers;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.MappingResolver;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnList;
@@ -67,7 +68,7 @@ record MethodInfo(String owner, String name, String desc) {
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return owner + '.' + name + ':' + desc;
     }
 }

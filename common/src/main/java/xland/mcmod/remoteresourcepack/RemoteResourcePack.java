@@ -36,7 +36,7 @@ public class RemoteResourcePack {
         try {
             cacheFiles = Collections.unmodifiableMap(cache(modsBuiltinConfigs, repo));
         } catch (IOException e) {
-            throw new RuntimeException("Failed to download/generate remote resource pack(s)", e);
+            LOGGER.error("Failed to download/generate remote resource pack(s)", e);
         }
     }
 
@@ -50,6 +50,15 @@ public class RemoteResourcePack {
     @ExpectPlatform
     static Path getGameDir() { throw new AssertionError("ExpectPlatform"); }
 
+    private static int getConfigVersion(JsonObject obj) {
+        JsonElement configVersionElement = obj.get("configVersion");
+        if (configVersionElement == null || !configVersionElement.isJsonPrimitive() || !configVersionElement.getAsJsonPrimitive().isNumber()) {
+            return -1;
+        } else {
+            return configVersionElement.getAsJsonPrimitive().getAsInt();
+        }
+    }
+
     static Map<String, Path> cache(Map<String, Path> modConfigs, Path repo)
             throws IOException, JsonParseException {
         // load configs from mods
@@ -57,6 +66,7 @@ public class RemoteResourcePack {
         final Path modConfigDir = getModConfigDir().toAbsolutePath().normalize();
         Files.createDirectories(modConfigDir);
         final Map<String, JsonObject> toBeWritten = new LinkedHashMap<>();
+        final Map<String, Integer> configVersions = new HashMap<>();
         {
             final Map<String, String> path2modCache = new LinkedHashMap<>();
             for (Map.Entry<String, Path> confFileEntry : modConfigs.entrySet()) {
@@ -75,7 +85,13 @@ public class RemoteResourcePack {
                                 "Duplicate definition of %s (from mod %s and %s)",
                                 e.getKey(), mod1, mod2));
                     });
-                    toBeWritten.put(e.getKey(), e.getValue().getAsJsonObject());
+                    JsonObject obj = e.getValue().getAsJsonObject();
+                    // Check version
+                    {
+                        final int configVersion = getConfigVersion(obj);
+                        configVersions.put(e.getKey(), configVersion);
+                    }
+                    toBeWritten.put(e.getKey(), obj);
                 }
             }
         }
@@ -83,7 +99,20 @@ public class RemoteResourcePack {
         LOGGER.info(MARKER, "Dumping builtin configs");
         for (Map.Entry<String, JsonObject> filename2json : toBeWritten.entrySet()) {
             final Path configFile = modConfigDir.resolve(filename2json.getKey()).toAbsolutePath().normalize();
-            if (Files.exists(configFile)) continue;
+            if (Files.exists(configFile)) {
+                // Check version
+                try (BufferedReader reader = Files.newBufferedReader(configFile)) {
+                    JsonObject obj = GSON.fromJson(reader, JsonObject.class);
+                    final int localConfigVersion = getConfigVersion(obj);
+                    final int givenConfigVersion = configVersions.getOrDefault(filename2json.getKey(), -1);
+                    if (givenConfigVersion <= localConfigVersion) {
+                        // No need to update, skip
+                        continue;
+                    }
+                } catch (Exception e) {
+                    LOGGER.warn("Can't read config at {}. Force override.", configFile);
+                }
+            }
             // security check: file should be INSIDE modConfigDir
             {
                 Path dynPath = configFile;
@@ -146,6 +175,12 @@ public class RemoteResourcePack {
     @ExpectPlatform
     static Map<String, Path> getModsBuiltinConfigs() { throw new AssertionError(); }
 
+    @ExpectPlatform
+    static String modVersion() { throw new AssertionError("ExpectPlatform"); }
+
+    @ExpectPlatform
+    static String minecraftVersion() { throw new AssertionError("ExpectPlatform"); }
+
     @DontObfuscate  // invoked by Forge coremod and Fabric ASM
     @SuppressWarnings("unused")
     public static void insertEnabledPacks(PackRepository packRepository) {
@@ -154,9 +189,7 @@ public class RemoteResourcePack {
 
         set.addAll(packRepository.getSelectedIds());
         set.addAll(remotePackNames);
-//        LOGGER.info("Available-1: {}", packRepository.getSelectedIds());
         packRepository.setSelected(set);
-//        LOGGER.info("Available-2: {}", packRepository.getSelectedIds());
         final List<String> optionsResourcePacks = Minecraft.getInstance().options.resourcePacks;
         remotePackNames.forEach(s -> {
             if (!optionsResourcePacks.contains(s))

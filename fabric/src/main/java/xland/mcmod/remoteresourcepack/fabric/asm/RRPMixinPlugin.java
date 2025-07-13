@@ -23,8 +23,8 @@ public class RRPMixinPlugin implements IMixinConfigPlugin {
     @Override
     public void onLoad(String mixinPackage) {
         target_PackRepository_reload = MethodInfo.ofFabric(
-                "net/minecraft/class_3283",
-                "method_14445",
+                "net/minecraft/class_3283",     // net/minecraft/server/packs/repository/PackRepository
+                "method_14445",                         // reload
                 "()V"
         );
         hook_MutablePackRepository_hookAddPackSource = MethodInfo.ofHook(

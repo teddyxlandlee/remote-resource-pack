@@ -9,26 +9,26 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.StringCharacterIterator;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletionException;
 
 public final class HashableSingleSource {
-    final URL baseUrl;
-    final URL zipConfigUrl;
+    final URI baseUri;
+    final URI zipConfigUri;
     final Duration autoUpdate;
     final Map<String, String> args;
     private static final byte schemaVersion = 1;
     private transient final String hash;
 
-    HashableSingleSource(URL baseUrl, URL zipConfigUrl, Duration autoUpdate, Map<String, String> args) {
-        this.baseUrl = baseUrl;
-        this.zipConfigUrl = zipConfigUrl;
+    HashableSingleSource(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
+        this.baseUri = baseUri;
+        this.zipConfigUri = zipConfigUri;
         this.autoUpdate = autoUpdate;
         this.args = args;
 
@@ -54,11 +54,11 @@ public final class HashableSingleSource {
         }
     }
 
-    public Path generate(Path repo) throws IOException {
+    public Path generate(Path repo) throws IOException, CompletionException {
         final Path file = getStoreCacheFile(repo);
         if (!isOutdated(repo)) return file;
         Files.createDirectories(file.getParent());
-        ZipConfigUtil.generateZip(readZipConfig(), baseUrl, args, file);
+        ZipConfigDownload.generateZip(readZipConfig(), baseUri, args, file);
 
         final Path timestamp = getStoreCacheTimestampFile(repo);
         try (DataOutputStream output = new DataOutputStream(Files.newOutputStream(timestamp))) {
@@ -68,7 +68,7 @@ public final class HashableSingleSource {
     }
 
     private JsonObject readZipConfig() throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(zipConfigUrl.openStream()))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(zipConfigUri.toURL().openStream()))) {
             return GsonHelper.parse(reader);
         }
     }
@@ -97,20 +97,20 @@ public final class HashableSingleSource {
         return repo.resolve(getSlicedHash().append(".timestamp").toString());
     }
 
-    public static HashableSingleSource of(URL baseUrl, URL zipConfigUrl, Duration autoUpdate, Map<String, String> args) {
+    public static HashableSingleSource of(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
         autoUpdate = canonicalizeDuration(autoUpdate);
-        return new HashableSingleSource(baseUrl, zipConfigUrl, autoUpdate, args);
+        return new HashableSingleSource(baseUri, zipConfigUri, autoUpdate, args);
     }
 
     public static HashableSingleSource readFromJson(JsonObject obj) throws JsonParseException {
         if (GsonHelper.getAsByte(obj, "schema", (byte)0) != schemaVersion)
             throw new JsonParseException(schemaMismatch(obj.get("schema").getAsByte()));
-        final URL baseUrl, zipConfigUrl;
+        final URI baseUri, zipConfigUri;
         try {
-            baseUrl = new URL(GsonHelper.getAsString(obj, "base"));
-            zipConfigUrl = new URL(GsonHelper.getAsString(obj, "zipconfig"));
-        } catch (MalformedURLException e) {
-            throw new JsonParseException("Unresolvable URL", e);
+            baseUri = URI.create(GsonHelper.getAsString(obj, "base"));
+            zipConfigUri = URI.create(GsonHelper.getAsString(obj, "zipconfig"));
+        } catch (IllegalArgumentException e) {
+            throw new JsonParseException("Unresolvable URI", e);
         }
         final String autoUpdateExpr = GsonHelper.getAsString(obj, "autoUpdate", "2d");
         Duration autoUpdate = switch (autoUpdateExpr) {
@@ -129,7 +129,7 @@ public final class HashableSingleSource {
             args.put(e.getKey(), e.getValue().getAsString());
         });
 
-        return of(baseUrl, zipConfigUrl, autoUpdate, args);
+        return of(baseUri, zipConfigUri, autoUpdate, args);
     }
 
     private static IOException schemaMismatch(int b) {
@@ -162,8 +162,8 @@ public final class HashableSingleSource {
 
     public void dumpsToBinary(DataOutput output) throws IOException {
         output.writeByte(schemaVersion);
-        output.writeUTF(baseUrl.toString());
-        output.writeUTF(zipConfigUrl.toString());
+        output.writeUTF(baseUri.toString());
+        output.writeUTF(zipConfigUri.toString());
         writeDuration(output, autoUpdate);
         // write args
         writeMap(output, args);
@@ -211,8 +211,8 @@ public final class HashableSingleSource {
         HashableSingleSource that = (HashableSingleSource) o;
 
         return new EqualsBuilder()
-                .append(baseUrl, that.baseUrl)
-                .append(zipConfigUrl, that.zipConfigUrl)
+                .append(baseUri, that.baseUri)
+                .append(zipConfigUri, that.zipConfigUri)
                 .append(autoUpdate, that.autoUpdate)
                 .append(args, that.args)
                 .isEquals();
@@ -221,8 +221,8 @@ public final class HashableSingleSource {
     @Override
     public int hashCode() {
         return new HashCodeBuilder(17, 37)
-                .append(baseUrl)
-                .append(zipConfigUrl)
+                .append(baseUri)
+                .append(zipConfigUri)
                 .append(autoUpdate)
                 .append(args)
                 .toHashCode();
@@ -231,8 +231,8 @@ public final class HashableSingleSource {
     @Override
     public String toString() {
         return new ToStringBuilder(this)
-                .append("baseUrl", baseUrl)
-                .append("zipConfigUrl", zipConfigUrl)
+                .append("baseUri", baseUri)
+                .append("zipConfigUri", zipConfigUri)
                 .append("autoUpdate", autoUpdate)
                 .append("args", args)
                 .toString();

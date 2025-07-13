@@ -33,4 +33,18 @@ public final class RemoteResourcePackImpl {
                 )
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
+
+    private static String getModVersion(String modId) {
+        return FabricLoader.getInstance().getModContainer(modId)
+                .map(modContainer -> modContainer.getMetadata().getVersion().getFriendlyString())
+                .orElseThrow(() -> new RuntimeException("Can't find " + modId + " mod?!"));
+    }
+
+    public static String modVersion() {
+        return getModVersion(RemoteResourcePack.MOD_ID);
+    }
+
+    public static String minecraftVersion() {
+        return getModVersion("minecraft");
+    }
 }

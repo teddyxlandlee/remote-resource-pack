@@ -1,11 +1,13 @@
 package xland.mcmod.remoteresourcepack.neoforge;
 
 import net.neoforged.fml.ModList;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.FMLPaths;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public final class RemoteResourcePackImpl {
@@ -18,9 +20,19 @@ public final class RemoteResourcePackImpl {
     }
 
     public static Map<String, Path> getModsBuiltinConfigs() {
-        return ModList.get().applyForEachModFile(modFile -> Map.entry(modFile.getModInfos().get(0).getModId(),
-                        modFile.findResource("RemoteResourcePack.json")))
+        return ModList.get().applyForEachModFile(modFile -> Map.entry(
+                        modFile.getModInfos().getFirst().getModId(),
+                        modFile.findResource("RemoteResourcePack.json")
+                ))
                 .filter(e -> Files.exists(e.getValue()))
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public static String modVersion() {
+        return Objects.requireNonNull(RemoteResourcePackNeo.modVersion, "modVersion uninitialized");
+    }
+
+    public static String minecraftVersion() {
+        return FMLLoader.versionInfo().mcVersion();
     }
 }
