@@ -1,14 +1,18 @@
 package xland.mcmod.remoteresourcepack;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.*;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.repository.RepositorySource;
+import net.minecraft.util.GsonHelper;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.function.Consumer;
@@ -28,6 +32,35 @@ public class RRPCacheRepoSource implements RepositorySource {
 
     public RRPCacheRepoSource(Map<String, Path> knownCaches) {
         this.knownCaches = Collections.unmodifiableMap(knownCaches);
+    }
+
+    private static final Gson GSON = new Gson();
+    private static final String FORCE_COMPATIBLE = "remoteresourcepack:force_compatible";
+
+    static byte[] modifyPackMcmeta(final byte @NotNull[] b) {
+        Objects.requireNonNull(b, "input bytes shall be non-null");
+        try {
+            return modifyPackMcmetaImpl(b);
+        } catch (Exception e) {
+            RemoteResourcePack.LOGGER.warn("Exception while trying to modifying a pack.mcmeta. Remaining unchanged.", e);
+            return b;
+        }
+    }
+
+    private static byte[] modifyPackMcmetaImpl(final byte[] b) throws RuntimeException {
+        String s = new String(b, StandardCharsets.UTF_8);
+        JsonObject rootObj = GSON.fromJson(s, JsonObject.class);
+        if (!GsonHelper.getAsBoolean(rootObj, FORCE_COMPATIBLE, false)) {
+            // no need to modify
+            return b;
+        }
+        JsonObject packObj = GsonHelper.getAsJsonObject(rootObj, "pack");
+
+        packObj.addProperty("min_format", 65);  // the version that defines min/max_format
+        packObj.addProperty("max_format", Integer.MAX_VALUE);
+        packObj.remove("supported_formats");
+        packObj.remove("pack_format");
+        return packObj.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     @Override

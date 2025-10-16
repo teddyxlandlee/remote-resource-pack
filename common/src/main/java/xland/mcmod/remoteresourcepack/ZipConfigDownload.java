@@ -32,6 +32,7 @@ final class ZipConfigDownload implements Closeable {
     private static final Base64.Decoder B64DECODER = Base64.getDecoder();
     private static final ThreadLocal<RandomGenerator> RANDOM = ThreadLocal.withInitial(java.util.Random::new);
     private static final String SKIP_KEY = "mod";
+    private static final String PACK_MCMETA = "pack.mcmeta";
 
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
@@ -62,13 +63,11 @@ final class ZipConfigDownload implements Closeable {
     private final URI baseUri;
     private final List<CompletableFuture<?>> futures;
 
-    private static final Supplier<String> USER_AGENT = Suppliers.memoize(ZipConfigDownload::userAgent0);
-
-    private static String userAgent0() {
-        return "RemoteResourcePack/" + RemoteResourcePack.modVersion()
-                + " MC/" + RemoteResourcePack.minecraftVersion()
-                + " (Platform:" + ClientBrandRetriever.getClientModName() + ")";
-    }
+    private static final Supplier<String> USER_AGENT = Suppliers.memoize(() ->
+            "RemoteResourcePack/" + RemoteResourcePack.modVersion()
+                    + " MC/" + RemoteResourcePack.minecraftVersion()
+                    + " (Platform:" + ClientBrandRetriever.getClientModName() + ")"
+    );
 
     private static boolean isStatusOk(int statusCode) {
         return statusCode >= 200 && statusCode <= 299;
@@ -78,15 +77,15 @@ final class ZipConfigDownload implements Closeable {
         if (shouldSkip(data)) return;
         final ZipEntry zipEntry = new ZipEntry(filename);
 
-        CompletableFuture<byte[]> completableFuture = null;
-        final CompletableFuture<Void> finalFuture;
+        CompletableFuture<byte[]> fetchBytesFuture = null;
+        final CompletableFuture<Void> putEntryFuture;
 
         if (!filename.endsWith("/")) {  // otherwise is directory
             if (isStringValue(data, "fetch")) {
                 final String s = getAsString(data, "fetch");
-                URI uri = baseUri.resolve(s);
+                final URI uri = baseUri.resolve(s);
 
-                completableFuture = httpClient.sendAsync(
+                fetchBytesFuture = httpClient.sendAsync(
                         HttpRequest.newBuilder(uri).GET().header("User-Agent", USER_AGENT.get()).build(),
                         HttpResponse.BodyHandlers.ofByteArray()
                 ).thenCompose(httpResponse -> {
@@ -98,15 +97,20 @@ final class ZipConfigDownload implements Closeable {
                 });
             } else if (isStringValue(data, "base64")) {
                 final byte[] b = B64DECODER.decode(getAsString(data, "base64"));
-                completableFuture = CompletableFuture.completedFuture(b);
+                fetchBytesFuture = CompletableFuture.completedFuture(b);
             } else if (isStringValue(data, "raw")) {
-                byte[] b = getAsString(data, "raw").getBytes(StandardCharsets.UTF_8);
-                completableFuture = CompletableFuture.completedFuture(b);
+                final byte[] b = getAsString(data, "raw").getBytes(StandardCharsets.UTF_8);
+                fetchBytesFuture = CompletableFuture.completedFuture(b);
             }   // else: put an empty entry
         }
 
-        if (completableFuture != null) {
-            finalFuture = completableFuture.thenComposeAsync(bytes -> {
+        if (fetchBytesFuture != null) {
+            // possible redirection for "pack.mcmeta"
+            if (PACK_MCMETA.equals(filename)) {
+                fetchBytesFuture = fetchBytesFuture.thenApply(RRPCacheRepoSource::modifyPackMcmeta);
+            }
+
+            putEntryFuture = fetchBytesFuture.thenComposeAsync(bytes -> {
                 try {
                     zos.putNextEntry(zipEntry);
                     zos.write(bytes);
@@ -117,7 +121,7 @@ final class ZipConfigDownload implements Closeable {
                 }
             }, executor);
         } else {    // a directory or an empty entry
-            finalFuture = new CompletableFuture<Void>().thenComposeAsync(v -> {
+            putEntryFuture = new CompletableFuture<Void>().thenComposeAsync(v -> {
                 try {
                     zos.putNextEntry(zipEntry);
                     zos.closeEntry();
@@ -127,7 +131,7 @@ final class ZipConfigDownload implements Closeable {
                 }
             }, executor);
         }
-        this.futures.add(finalFuture);
+        this.futures.add(putEntryFuture);
     }
 
     private static boolean shouldSkip(JsonObject data) {
