@@ -19,9 +19,8 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.*;
 
-public class RemoteResourcePack {
+public abstract class RemoteResourcePack {
     public static final String MOD_ID = "remoteresourcepack";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     static final Logger LOGGER = LogManager.getLogger();
@@ -29,11 +28,20 @@ public class RemoteResourcePack {
 
     private static volatile Map<String, Path> cacheFiles;
 
+    public static String packName(String key) {
+        return "RemoteResourcePack/" + key;
+    }
+
+    @ExpectPlatform
+    public static RemoteResourcePack platform() {
+        throw new AssertionError("ExpectPlatform");
+    }
+
     @DontObfuscate  // invoked by Fabric entrypoint
     public static void init() {
-        final Path repo = getGameDir().resolve("RemoteResourcePack");
+        final Path repo = platform().getGameDir().resolve("RemoteResourcePack");
         LOGGER.info(MARKER, "Scanning builtin mod config");
-        final Map<String, IOSupplier<BufferedReader>> modsBuiltinConfigs = getModsBuiltinConfigs();
+        final Map<String, IOSupplier<BufferedReader>> modsBuiltinConfigs = platform().getModsBuiltinConfigs();
         try {
             cacheFiles = Collections.unmodifiableMap(cache(modsBuiltinConfigs, repo));
         } catch (IOException e) {
@@ -48,8 +56,7 @@ public class RemoteResourcePack {
         return map;
     }
 
-    @ExpectPlatform
-    static Path getGameDir() { throw new AssertionError("ExpectPlatform"); }
+    protected abstract Path getGameDir();
 
     private static int getConfigVersion(JsonObject obj) {
         JsonElement configVersionElement = obj.get("configVersion");
@@ -160,27 +167,23 @@ public class RemoteResourcePack {
     }
 
     static Path getModConfigDir() {
-        return getConfigDir().resolve("RemoteResourcePack");
+        return platform().getConfigDir().resolve("RemoteResourcePack");
     }
 
-    @ExpectPlatform
-    private static Path getConfigDir() { throw new AssertionError("ExpectPlatform"); }
+    protected abstract Path getConfigDir();
 
     // <mod.jar>/RemoteResourcePack.json
-    @ExpectPlatform
-    static Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() { throw new AssertionError(); }
+    protected abstract Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs();
 
-    @ExpectPlatform
-    static String modVersion() { throw new AssertionError("ExpectPlatform"); }
+    protected abstract String modVersion();
 
-    @ExpectPlatform
-    static String minecraftVersion() { throw new AssertionError("ExpectPlatform"); }
+    protected abstract String minecraftVersion();
 
-    @DontObfuscate  // invoked by Forge coremod and Fabric ASM
-    @SuppressWarnings("unused")
+    // invoked by Mixins
     public static void insertEnabledPacks(PackRepository packRepository) {
         final Set<String> set = new LinkedHashSet<>();
-        final List<String> remotePackNames = getCacheFiles().keySet().stream().map(s -> "RemoteResourcePack/" + s).toList();
+        final List<String> remotePackNames = getCacheFiles().keySet().stream().map(RemoteResourcePack::packName).toList();
+        if (remotePackNames.isEmpty()) return;
 
         set.addAll(packRepository.getSelectedIds());
         set.addAll(remotePackNames);

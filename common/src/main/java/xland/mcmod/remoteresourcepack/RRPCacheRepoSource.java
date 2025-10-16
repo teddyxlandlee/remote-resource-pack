@@ -60,13 +60,13 @@ public class RRPCacheRepoSource implements RepositorySource {
         packObj.addProperty("max_format", Integer.MAX_VALUE);
         packObj.remove("supported_formats");
         packObj.remove("pack_format");
-        return packObj.toString().getBytes(StandardCharsets.UTF_8);
+        return rootObj.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
     public void loadPacks(@NotNull Consumer<Pack> consumer) {
         for (Map.Entry<String, Path> entry : knownCaches.entrySet()) {
-            String packId = "RemoteResourcePack/" + entry.getKey();
+            String packId = RemoteResourcePack.packName(entry.getKey());
             Path zipFile = entry.getValue();
             // Now we don't support pack.mcmeta force-modification
             Pack.ResourcesSupplier resourcesSupplier = new FilePackResources.FileResourcesSupplier(getZipFile(zipFile));

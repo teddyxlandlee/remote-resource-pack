@@ -64,8 +64,8 @@ final class ZipConfigDownload implements Closeable {
     private final List<CompletableFuture<?>> futures;
 
     private static final Supplier<String> USER_AGENT = Suppliers.memoize(() ->
-            "RemoteResourcePack/" + RemoteResourcePack.modVersion()
-                    + " MC/" + RemoteResourcePack.minecraftVersion()
+            "RemoteResourcePack/" + RemoteResourcePack.platform().modVersion()
+                    + " MC/" + RemoteResourcePack.platform().minecraftVersion()
                     + " (Platform:" + ClientBrandRetriever.getClientModName() + ")"
     );
 

@@ -1,7 +1,9 @@
 package xland.mcmod.remoteresourcepack.fabric;
 
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.server.packs.repository.PackRepository;
 import org.apache.commons.io.function.IOSupplier;
+import xland.mcmod.remoteresourcepack.RRPCacheRepoSource;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
 import java.io.BufferedReader;
@@ -10,26 +12,26 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public final class RemoteResourcePackImpl {
+public final class RemoteResourcePackImpl extends RemoteResourcePack {
     public static void init() {
         RemoteResourcePack.init();
     }
 
-    public static Path getGameDir() {
+    protected Path getGameDir() {
         return FabricLoader.getInstance()
                 .getGameDir()
                 .toAbsolutePath()
                 .normalize();
     }
 
-    public static Path getConfigDir() {
+    protected Path getConfigDir() {
         return FabricLoader.getInstance()
                 .getConfigDir()
                 .toAbsolutePath()
                 .normalize();
     }
 
-    public static Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
+    protected Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
         return FabricLoader.getInstance().getAllMods().stream()
                 .flatMap(c -> c.findPath("RemoteResourcePack.json").stream().map(
                         p -> Map.entry(c.getMetadata().getId(), (IOSupplier<BufferedReader>) () -> Files.newBufferedReader(p)))
@@ -43,11 +45,22 @@ public final class RemoteResourcePackImpl {
                 .orElseThrow(() -> new RuntimeException("Can't find " + modId + " mod?!"));
     }
 
-    public static String modVersion() {
+    protected String modVersion() {
         return getModVersion(RemoteResourcePack.MOD_ID);
     }
 
-    public static String minecraftVersion() {
+    public static void addPackSource(PackRepository packRepository) {
+        ((MutablePackRepository) packRepository).remoteResourcePack$addRepoSource(
+                new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles())
+        );
+    }
+
+    protected String minecraftVersion() {
         return getModVersion("minecraft");
     }
+
+    private static final RemoteResourcePackImpl INSTANCE = new RemoteResourcePackImpl();
+
+    @SuppressWarnings("unused")
+    public static RemoteResourcePack platform() { return INSTANCE; }
 }

@@ -42,3 +42,6 @@ modUrl='https://modrinth.com/mod/remote-resource-pack'
    versionRange="[1.20.5,)"
    ordering="NONE"
    side="CLIENT"
+
+[[mixins]]
+config = 'remoteresourcepack.mixins.json'
