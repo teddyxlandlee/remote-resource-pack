@@ -1,8 +1,11 @@
 package xland.mcmod.remoteresourcepack.fabric;
 
 import net.fabricmc.loader.api.FabricLoader;
+import org.apache.commons.io.function.IOSupplier;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
+import java.io.BufferedReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,10 +29,10 @@ public final class RemoteResourcePackImpl {
                 .normalize();
     }
 
-    public static Map<String, Path> getModsBuiltinConfigs() {
+    public static Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
         return FabricLoader.getInstance().getAllMods().stream()
-                .flatMap(c -> c.findPath("RemoteResourcePack.json").stream()
-                        .map(p -> Map.entry(c.getMetadata().getId(), p))
+                .flatMap(c -> c.findPath("RemoteResourcePack.json").stream().map(
+                        p -> Map.entry(c.getMetadata().getId(), (IOSupplier<BufferedReader>) () -> Files.newBufferedReader(p)))
                 )
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }

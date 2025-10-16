@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.util.GsonHelper;
+import org.apache.commons.io.function.IOSupplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
@@ -14,11 +15,11 @@ import org.apache.logging.log4j.MarkerManager;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class RemoteResourcePack {
     public static final String MOD_ID = "remoteresourcepack";
@@ -32,7 +33,7 @@ public class RemoteResourcePack {
     public static void init() {
         final Path repo = getGameDir().resolve("RemoteResourcePack");
         LOGGER.info(MARKER, "Scanning builtin mod config");
-        final Map<String, Path> modsBuiltinConfigs = getModsBuiltinConfigs();
+        final Map<String, IOSupplier<BufferedReader>> modsBuiltinConfigs = getModsBuiltinConfigs();
         try {
             cacheFiles = Collections.unmodifiableMap(cache(modsBuiltinConfigs, repo));
         } catch (IOException e) {
@@ -59,7 +60,7 @@ public class RemoteResourcePack {
         }
     }
 
-    static Map<String, Path> cache(Map<String, Path> modConfigs, Path repo)
+    static Map<String, Path> cache(Map<String, IOSupplier<BufferedReader>> modConfigs, Path repo)
             throws IOException, JsonParseException {
         // load configs from mods
         LOGGER.info(MARKER, "Loading config");
@@ -69,9 +70,9 @@ public class RemoteResourcePack {
         final Map<String, Integer> configVersions = new HashMap<>();
         {
             final Map<String, String> path2modCache = new LinkedHashMap<>();
-            for (Map.Entry<String, Path> confFileEntry : modConfigs.entrySet()) {
+            for (Map.Entry<String, IOSupplier<BufferedReader>> confFileEntry : modConfigs.entrySet()) {
                 final JsonObject conf;
-                try (BufferedReader reader = Files.newBufferedReader(confFileEntry.getValue())) {
+                try (BufferedReader reader = confFileEntry.getValue().get()) {
                     conf = GsonHelper.parse(reader);
                 }
 
@@ -115,15 +116,12 @@ public class RemoteResourcePack {
             }
             // security check: file should be INSIDE modConfigDir
             {
-                Path dynPath = configFile;
                 boolean isSub = false;
-                while (true) {
-                    if (dynPath == null) break;
+                for (Path dynPath = configFile; dynPath != null; dynPath = dynPath.getParent()) {
                     if (dynPath.equals(modConfigDir)) {
                         isSub = true;
                         break;
                     }
-                    dynPath = dynPath.getParent();
                 }
                 if (!isSub)
                     throw new AccessDeniedException(filename2json.getKey() + " escapes out of config dir");
@@ -145,21 +143,18 @@ public class RemoteResourcePack {
                 try (BufferedReader reader = Files.newBufferedReader(path)) {
                     singleConfig = GsonHelper.parse(reader);
                 } catch (IOException e) {
-                    throw new UncheckedIOException(e);
+                    LOGGER.error("Failed to parse config from {}", path);
+                    return;
                 }
 
                 try {
                     final HashableSingleSource source = HashableSingleSource.readFromJson(singleConfig);
                     cacheFilesPerHash.put(source.getHash(), source.generate(repo));
                     LOGGER.info("Generated pack {} from {}", source.getHash(), path);
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
                 } catch (Exception e) {
                     LOGGER.error("Failed to parse config or generate pack from {}", path, e);
                 }
             });
-        } catch (UncheckedIOException e) {
-            throw e.getCause();
         }
         return cacheFilesPerHash;
     }
@@ -173,7 +168,7 @@ public class RemoteResourcePack {
 
     // <mod.jar>/RemoteResourcePack.json
     @ExpectPlatform
-    static Map<String, Path> getModsBuiltinConfigs() { throw new AssertionError(); }
+    static Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() { throw new AssertionError(); }
 
     @ExpectPlatform
     static String modVersion() { throw new AssertionError("ExpectPlatform"); }

@@ -43,15 +43,17 @@ final class ZipConfigDownload implements Closeable {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
                 .followRedirects(HttpClient.Redirect.NORMAL)
+                .executor(Executors.newVirtualThreadPerTaskExecutor())
                 .build();
         this.futures = new CopyOnWriteArrayList<>();
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         this.executor.close();
-        httpClient.close();
+        this.httpClient.close();
         this.futures.clear();
+        this.zos.close();
     }
 
     private final ZipOutputStream zos;
@@ -114,12 +116,7 @@ final class ZipConfigDownload implements Closeable {
                     return CompletableFuture.failedStage(e);
                 }
             }, executor);
-        } else {
-            executor.submit(() -> {
-                zos.putNextEntry(zipEntry);
-                zos.closeEntry();
-                return null;
-            });
+        } else {    // a directory or an empty entry
             finalFuture = new CompletableFuture<Void>().thenComposeAsync(v -> {
                 try {
                     zos.putNextEntry(zipEntry);

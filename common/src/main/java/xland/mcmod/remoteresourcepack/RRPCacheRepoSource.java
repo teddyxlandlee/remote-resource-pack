@@ -13,13 +13,16 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.function.Consumer;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class RRPCacheRepoSource implements RepositorySource {
     // Description: `%s (Remote cache)`
-    private static final PackSource PACK_SOURCE = PackSource.create(component2 ->
-            Component.translatable("pack.nameAndSource",
-                    component2,
+    private static final PackSource PACK_SOURCE = PackSource.create(
+            packName -> Component.translatable("pack.nameAndSource",
+                    packName,
                     Component.translatable("pack.source.mod.remoteresourcepack")
-            ).withStyle(ChatFormatting.GRAY), /*loadedOnStart=*/true);
+            ).withStyle(ChatFormatting.GRAY),
+            /*loadedOnStart=*/true
+    );
 
     private final Map<String, Path> knownCaches;
 

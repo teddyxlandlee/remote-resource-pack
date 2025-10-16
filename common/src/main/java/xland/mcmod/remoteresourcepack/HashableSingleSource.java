@@ -197,7 +197,6 @@ public final class HashableSingleSource {
         return os.toByteArray();
     }
 
-    @SuppressWarnings("all")
     private String internalCalcSha256() {
         return Hashing.sha256().hashBytes(this.toBytes()).toString();
     }

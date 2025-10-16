@@ -8,7 +8,7 @@ import net.neoforged.neoforge.event.AddPackFindersEvent;
 import xland.mcmod.remoteresourcepack.RRPCacheRepoSource;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
-@EventBusSubscriber(modid = RemoteResourcePack.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = RemoteResourcePack.MOD_ID, value = Dist.CLIENT)
 public class RRPEventListeners {
     @SubscribeEvent
     public static void addRepoSource(AddPackFindersEvent event) {
