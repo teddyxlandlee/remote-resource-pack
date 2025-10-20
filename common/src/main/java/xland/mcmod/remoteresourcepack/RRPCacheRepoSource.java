@@ -1,6 +1,7 @@
 package xland.mcmod.remoteresourcepack;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -56,11 +57,13 @@ public class RRPCacheRepoSource implements RepositorySource {
         }
         JsonObject packObj = GsonHelper.getAsJsonObject(rootObj, "pack");
 
-        // 1.21.9+
-        packObj.addProperty("min_format", 65);  // the version that defines min/max_format
-        packObj.addProperty("max_format", Integer.MAX_VALUE);
-        packObj.remove("supported_formats");
-        packObj.remove("pack_format");
+        // 1.21.8-1.20.5
+        var supportedFormats = new JsonArray(); {
+            supportedFormats.add(16);   // the version that defines supported_formats
+            supportedFormats.add(64);   // the next version defines min_format
+        }
+        packObj.add("supported_formats", supportedFormats);
+        packObj.addProperty("pack_format", 16);
         return rootObj.toString().getBytes(StandardCharsets.UTF_8);
     }
 

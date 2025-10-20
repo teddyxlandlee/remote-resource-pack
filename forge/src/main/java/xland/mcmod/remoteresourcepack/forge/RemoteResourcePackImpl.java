@@ -10,7 +10,7 @@ import java.io.BufferedReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Objects;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -39,7 +39,11 @@ public class RemoteResourcePackImpl extends RemoteResourcePack {
 
     @Override
     protected String modVersion() {
-        return Objects.requireNonNull(RemoteResourcePackForge.modVersion, "modVersion uninitialized");
+        return ModList.get().getModContainerById(MOD_ID)
+                .orElseThrow(() -> new NoSuchElementException(MOD_ID))
+                .getModInfo()
+                .getVersion()
+                .toString();
     }
 
     @Override

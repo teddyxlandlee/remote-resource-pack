@@ -6,6 +6,7 @@ import org.apache.commons.io.function.IOSupplier;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
 import java.io.BufferedReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
@@ -24,10 +25,11 @@ public final class RemoteResourcePackImpl extends RemoteResourcePack {
     public Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
         return ModList.get().applyForEachModFile(modFile -> Map.entry(
                 modFile.getModInfos().getFirst().getModId(),
-                Optional.ofNullable(modFile.getContents().get("RemoteResourcePack.json"))
+                Optional.of(modFile.findResource("RemoteResourcePack.json")).filter(Files::exists)
+//                Optional.ofNullable(modFile.getContents().get("RemoteResourcePack.json"))
         ))
                 .flatMap(e -> e.getValue().map(
-                        v -> Map.entry(e.getKey(), (IOSupplier<BufferedReader>) v::bufferedReader)
+                        v -> Map.entry(e.getKey(), (IOSupplier<BufferedReader>) () -> Files.newBufferedReader(v))
                 ).stream())
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
