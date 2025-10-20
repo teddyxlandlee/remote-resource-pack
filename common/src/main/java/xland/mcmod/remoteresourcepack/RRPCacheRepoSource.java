@@ -56,6 +56,7 @@ public class RRPCacheRepoSource implements RepositorySource {
         }
         JsonObject packObj = GsonHelper.getAsJsonObject(rootObj, "pack");
 
+        // 1.21.9+
         packObj.addProperty("min_format", 65);  // the version that defines min/max_format
         packObj.addProperty("max_format", Integer.MAX_VALUE);
         packObj.remove("supported_formats");

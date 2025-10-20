@@ -7,7 +7,6 @@ import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
 import java.io.BufferedReader;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -23,7 +22,6 @@ public final class RemoteResourcePackImpl extends RemoteResourcePack {
     }
 
     public Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
-        Map<String, IOSupplier<BufferedReader>> map = new LinkedHashMap<>();
         return ModList.get().applyForEachModFile(modFile -> Map.entry(
                 modFile.getModInfos().getFirst().getModId(),
                 Optional.ofNullable(modFile.getContents().get("RemoteResourcePack.json"))

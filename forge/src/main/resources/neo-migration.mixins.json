@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "xland.mcmod.remoteresourcepack.mixin.forge",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "Stub"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "plugin": "xland.mcmod.remoteresourcepack.forge.NeoMigrationPlugin"
+}

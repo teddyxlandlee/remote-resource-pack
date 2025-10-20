@@ -19,6 +19,8 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class RemoteResourcePack {
     public static final String MOD_ID = "remoteresourcepack";
@@ -67,17 +69,12 @@ public abstract class RemoteResourcePack {
         }
     }
 
-    static Map<String, Path> cache(Map<String, IOSupplier<BufferedReader>> modConfigs, Path repo)
-            throws IOException, JsonParseException {
-        // load configs from mods
-        LOGGER.info(MARKER, "Loading config");
-        final Path modConfigDir = getModConfigDir().toAbsolutePath().normalize();
-        Files.createDirectories(modConfigDir);
+    private static void extractModConfig(Map<String, IOSupplier<BufferedReader>> source, Path dest) throws IOException {
         final Map<String, JsonObject> toBeWritten = new LinkedHashMap<>();
         final Map<String, Integer> configVersions = new HashMap<>();
         {
             final Map<String, String> path2modCache = new LinkedHashMap<>();
-            for (Map.Entry<String, IOSupplier<BufferedReader>> confFileEntry : modConfigs.entrySet()) {
+            for (Map.Entry<String, IOSupplier<BufferedReader>> confFileEntry : source.entrySet()) {
                 final JsonObject conf;
                 try (BufferedReader reader = confFileEntry.getValue().get()) {
                     conf = GsonHelper.parse(reader);
@@ -106,7 +103,7 @@ public abstract class RemoteResourcePack {
         // dump configs to modConfigDir
         LOGGER.info(MARKER, "Dumping builtin configs");
         for (Map.Entry<String, JsonObject> filename2json : toBeWritten.entrySet()) {
-            final Path configFile = modConfigDir.resolve(filename2json.getKey()).toAbsolutePath().normalize();
+            final Path configFile = dest.resolve(filename2json.getKey()).toAbsolutePath().normalize();
             if (Files.exists(configFile)) {
                 // Check version
                 try (BufferedReader reader = Files.newBufferedReader(configFile)) {
@@ -125,7 +122,7 @@ public abstract class RemoteResourcePack {
             {
                 boolean isSub = false;
                 for (Path dynPath = configFile; dynPath != null; dynPath = dynPath.getParent()) {
-                    if (dynPath.equals(modConfigDir)) {
+                    if (dynPath.equals(dest)) {
                         isSub = true;
                         break;
                     }
@@ -139,30 +136,53 @@ public abstract class RemoteResourcePack {
                 GSON.toJson(filename2json.getValue(), writer);
             }
         }
+    }
+
+    static Map<String, Path> cache(Map<String, IOSupplier<BufferedReader>> modConfigs, Path repo)
+            throws IOException, JsonParseException {
+        // load configs from mods
+        LOGGER.info(MARKER, "Loading config");
+        final Path modConfigDir = getModConfigDir().toAbsolutePath().normalize();
+        Files.createDirectories(modConfigDir);
+
+        extractModConfig(modConfigs, modConfigDir);
+
         // download + generate zip files
         LOGGER.info("Downloading + generating files");
-        final Map<String, Path> cacheFilesPerHash = new LinkedHashMap<>();
-        try (var stream = Files.walk(modConfigDir)) {
-            stream.forEach(path -> {
-                if (!Files.isRegularFile(path) || !path.toString().endsWith(".json")) return;
 
-                final JsonObject singleConfig;
-                try (BufferedReader reader = Files.newBufferedReader(path)) {
-                    singleConfig = GsonHelper.parse(reader);
-                } catch (IOException e) {
-                    LOGGER.error("Failed to parse config from {}", path);
-                    return;
-                }
+        final ConcurrentMap<String, Path> cacheFilesPerHash = new ConcurrentHashMap<>();
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            CopyOnWriteArrayList<CompletableFuture<?>> futures = new CopyOnWriteArrayList<>();
+            AtomicInteger cc = new AtomicInteger();
 
-                try {
-                    final HashableSingleSource source = HashableSingleSource.readFromJson(singleConfig);
-                    cacheFilesPerHash.put(source.getHash(), source.generate(repo));
-                    LOGGER.info("Generated pack {} from {}", source.getHash(), path);
-                } catch (Exception e) {
-                    LOGGER.error("Failed to parse config or generate pack from {}", path, e);
-                }
-            });
+            try (var stream = Files.walk(modConfigDir)) {
+                stream.forEach(path -> {
+                    if (!Files.isRegularFile(path) || !path.toString().endsWith(".json")) return;
+
+                    futures.add(CompletableFuture.runAsync(() -> {
+                        LOGGER.info("(#{}) Generating pack from {}", cc.incrementAndGet(), path);
+
+                        final JsonObject singleConfig;
+                        try (BufferedReader reader = Files.newBufferedReader(path)) {
+                            singleConfig = GsonHelper.parse(reader);
+                        } catch (IOException e) {
+                            LOGGER.error("Failed to parse config from {}", path);
+                            return;
+                        }
+
+                        try {
+                            final HashableSingleSource source = HashableSingleSource.readFromJson(singleConfig);
+                            cacheFilesPerHash.put(source.getHash(), source.generate(repo));
+                            LOGGER.info("Generated pack {} from {}", source.getHash(), path);
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to parse config or generate pack from {}", path, e);
+                        }
+                    }, executor));
+                });
+            }
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         }
+
         return cacheFilesPerHash;
     }
 
