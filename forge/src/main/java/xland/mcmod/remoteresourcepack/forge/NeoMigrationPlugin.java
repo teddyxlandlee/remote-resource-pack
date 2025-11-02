@@ -26,8 +26,6 @@ public class NeoMigrationPlugin implements IMixinConfigPlugin {
         return list;
     }
 
-
-
     private static void applyMigration(ClassNode classNode) {
         classNode.methods.stream()
                 // 1.21.6+: use boolean

@@ -14,6 +14,7 @@
   "contact": {},
 
   "license": "MIT",
+  "icon": "assets/remoteresourcepack/icon.png",
 
   "environment": "client",
   "entrypoints": {
@@ -27,7 +28,7 @@
   ],
   "depends": {
     "fabricloader": ">=0.17",
-    "minecraft": ">=1.21.9"
+    "minecraft": ">=1.21.9 <1.21.11"
   },
   "recommends": {
     "fabric-resource-loader-v0": "*"

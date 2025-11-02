@@ -202,15 +202,18 @@ public abstract class RemoteResourcePack {
     // invoked by Mixins
     public static void insertEnabledPacks(PackRepository packRepository) {
         final Set<String> set = new LinkedHashSet<>();
+        // proven that elements are unique: mapped from keySet
         final List<String> remotePackNames = getCacheFiles().keySet().stream().map(RemoteResourcePack::packName).toList();
         if (remotePackNames.isEmpty()) return;
 
         set.addAll(packRepository.getSelectedIds());
         set.addAll(remotePackNames);
         packRepository.setSelected(set);
+
         final List<String> optionsResourcePacks = Minecraft.getInstance().options.resourcePacks;
+        final Set<String> existingPackNames = new HashSet<>(optionsResourcePacks);
         remotePackNames.forEach(s -> {
-            if (!optionsResourcePacks.contains(s))
+            if (!existingPackNames.contains(s))
                 optionsResourcePacks.add(s);
         });
     }

@@ -23,5 +23,5 @@ public class RemoteResourcePackNeo {
         });
     }
 
-    static String modVersion;
+    static volatile String modVersion;
 }
