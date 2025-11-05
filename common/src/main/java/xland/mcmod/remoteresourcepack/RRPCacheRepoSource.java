@@ -42,7 +42,7 @@ public class RRPCacheRepoSource implements RepositorySource {
         try {
             return modifyPackMcmetaImpl(b);
         } catch (Exception e) {
-            RemoteResourcePack.LOGGER.warn("Exception while trying to modifying a pack.mcmeta. Remaining unchanged.", e);
+            RemoteResourcePack.LOGGER.warn("Exception while trying to modify a pack.mcmeta. Remaining unchanged.", e);
             return b;
         }
     }
