@@ -16,11 +16,11 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 import java.util.random.RandomGenerator;
@@ -31,7 +31,7 @@ import static net.minecraft.util.GsonHelper.*;
 
 final class ZipConfigDownload implements Closeable {
     private static final Base64.Decoder B64DECODER = Base64.getDecoder();
-    private static final RandomGenerator RANDOM = new SecureRandom();
+    private static final ScopedValue<RandomGenerator> RANDOM = ScopedValue.newInstance();
     private static final String SKIP_KEY = "mod";
     private static final String PACK_MCMETA = "pack.mcmeta";
 
@@ -154,6 +154,15 @@ final class ZipConfigDownload implements Closeable {
     static void generateZip(JsonObject zipConfig, URI baseUri,
                             Map<String, String> args, Path dest)
             throws IOException, CompletionException {
+        ScopedValue.where(RANDOM, new Random()).call(() -> {
+            internalGenerateZip(zipConfig, baseUri, args, dest);
+            return null;
+        });
+    }
+
+    private static void internalGenerateZip(JsonObject zipConfig, URI baseUri,
+                            Map<String, String> args, Path dest)
+            throws IOException, CompletionException {
         try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(dest))) {
             try (ZipConfigDownload zipConfigDownload = new ZipConfigDownload(zos, baseUri)) {
                 final JsonObject staticFiles = getAsJsonObject(zipConfig, "static");
@@ -207,7 +216,7 @@ final class ZipConfigDownload implements Closeable {
                             totalWeight += (weights[index++] = weight);
                         }
 
-                        int randomNum = RANDOM.nextInt(totalWeight);
+                        int randomNum = RANDOM.get().nextInt(totalWeight);
                         index = 0;
                         for (JsonElement item0 : items) {
                             randomNum -= weights[index++];
