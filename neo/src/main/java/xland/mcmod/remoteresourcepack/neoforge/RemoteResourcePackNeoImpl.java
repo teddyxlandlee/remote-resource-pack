@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public final class RemoteResourcePackImpl extends RemoteResourcePack {
+public final class RemoteResourcePackNeoImpl extends RemoteResourcePack {
     public Path getGameDir() {
         return FMLPaths.GAMEDIR.get();
     }
@@ -33,13 +33,10 @@ public final class RemoteResourcePackImpl extends RemoteResourcePack {
     }
 
     public String modVersion() {
-        return Objects.requireNonNull(RemoteResourcePackNeo.modVersion, "modVersion uninitialized");
+        return Objects.requireNonNull(RemoteResourcePackNeoEntrypoint.modVersion, "modVersion uninitialized");
     }
 
     public String minecraftVersion() {
         return Objects.requireNonNull(ModList.get().getModFileById("minecraft"), "Minecraft not found?!").versionString();
     }
-
-    private static final RemoteResourcePackImpl INSTANCE = new RemoteResourcePackImpl();
-    public static RemoteResourcePack platform() { return INSTANCE; }
 }

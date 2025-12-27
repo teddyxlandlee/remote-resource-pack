@@ -3,6 +3,7 @@ package xland.mcmod.remoteresourcepack.fabric;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.packs.repository.PackRepository;
 import org.apache.commons.io.function.IOSupplier;
+import xland.mcmod.remoteresourcepack.Platform;
 import xland.mcmod.remoteresourcepack.RRPCacheRepoSource;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
@@ -12,7 +13,8 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public final class RemoteResourcePackImpl extends RemoteResourcePack {
+@Platform.Implementation(Platform.FABRIC)
+public final class RemoteResourcePackFabric extends RemoteResourcePack {
     public static void init() {
         RemoteResourcePack.init();
     }
@@ -58,9 +60,4 @@ public final class RemoteResourcePackImpl extends RemoteResourcePack {
     protected String minecraftVersion() {
         return getModVersion("minecraft");
     }
-
-    private static final RemoteResourcePackImpl INSTANCE = new RemoteResourcePackImpl();
-
-    @SuppressWarnings("unused")
-    public static RemoteResourcePack platform() { return INSTANCE; }
 }

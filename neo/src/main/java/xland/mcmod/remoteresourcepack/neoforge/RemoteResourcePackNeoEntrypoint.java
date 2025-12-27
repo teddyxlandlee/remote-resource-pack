@@ -10,8 +10,8 @@ import xland.mcmod.remoteresourcepack.RRPCacheRepoSource;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
 @Mod(RemoteResourcePack.MOD_ID)
-public class RemoteResourcePackNeo {
-    public RemoteResourcePackNeo(Dist dist, ModContainer modContainer, IEventBus bus) {
+public class RemoteResourcePackNeoEntrypoint {
+    public RemoteResourcePackNeoEntrypoint(Dist dist, ModContainer modContainer, IEventBus bus) {
         if (!dist.isClient())
             throw new IllegalStateException("Mod " + RemoteResourcePack.MOD_ID + " is client-only!");
         modVersion = modContainer.getModInfo().getVersion().toString();

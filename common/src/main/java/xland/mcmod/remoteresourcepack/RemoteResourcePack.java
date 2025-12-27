@@ -1,9 +1,7 @@
 package xland.mcmod.remoteresourcepack;
 
 import com.google.gson.*;
-import dev.architectury.injectables.annotations.ExpectPlatform;
 import net.minecraft.client.Minecraft;
-import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.util.GsonHelper;
 import org.apache.commons.io.function.IOSupplier;
@@ -34,12 +32,14 @@ public abstract class RemoteResourcePack {
         return "RemoteResourcePack/" + key;
     }
 
-    @ExpectPlatform
     public static RemoteResourcePack platform() {
-        throw new AssertionError("ExpectPlatform");
+        class Holder {
+            static final RemoteResourcePack PLATFORM = Platform.findImplementation(RemoteResourcePack.class);
+        }
+        return Holder.PLATFORM;
     }
 
-    @DontObfuscate  // invoked by Fabric entrypoint
+    // invoked by Fabric entrypoint
     public static void init() {
         final Path repo = platform().getGameDir().resolve("RemoteResourcePack");
         LOGGER.info(MARKER, "Scanning builtin mod config");

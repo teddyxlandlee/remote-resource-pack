@@ -19,7 +19,7 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      "xland.mcmod.remoteresourcepack.fabric.RemoteResourcePackImpl::init"
+      "xland.mcmod.remoteresourcepack.fabric.RemoteResourcePackFabric::init"
     ]
   },
   "mixins": [
