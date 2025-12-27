@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
 @Mixin(Options.class)
-abstract class MixinOptions {
+public abstract class MixinOptions {
     @Inject(method = "loadSelectedResourcePacks", at = @At("RETURN"))
     private void afterLoadingPacks(PackRepository packRepository, CallbackInfo ci) {
         RemoteResourcePack.insertEnabledPacks(packRepository);
