@@ -7,11 +7,12 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 public class NeoMigrationPlugin implements IMixinConfigPlugin {
-    private static final Collection<String> patchedMethodCandidate = Set.of("m_295067_", "addInitialScreens");
+    private static final Collection<String> patchedMethodCandidate = Collections.singleton("addInitialScreens");
 
     private static InsnList injectedList() {
         var list = new InsnList();

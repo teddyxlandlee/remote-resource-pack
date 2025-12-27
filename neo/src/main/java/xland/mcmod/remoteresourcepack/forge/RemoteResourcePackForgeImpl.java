@@ -2,11 +2,13 @@ package xland.mcmod.remoteresourcepack.forge;
 
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.versions.mcp.MCPVersion;
 import org.apache.commons.io.function.IOSupplier;
+import xland.mcmod.remoteresourcepack.Platform;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
 import java.io.BufferedReader;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -14,7 +16,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class RemoteResourcePackImpl extends RemoteResourcePack {
+@Platform.Implementation(Platform.FORGE)
+public class RemoteResourcePackForgeImpl extends RemoteResourcePack {
     @Override
     protected Path getGameDir() {
         return FMLPaths.GAMEDIR.get();
@@ -28,9 +31,9 @@ public class RemoteResourcePackImpl extends RemoteResourcePack {
     @Override
     protected Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
         return ModList.get().applyForEachModFile(modFile -> Map.entry(
-                modFile.getModInfos().getFirst().getModId(),
-                Optional.of(modFile.findResource("RemoteResourcePack.json")).filter(Files::exists)
-        ))
+                        modFile.getModInfos().getFirst().getModId(),
+                        Optional.of(modFile.findResource("RemoteResourcePack.json")).filter(Files::exists)
+                ))
                 .flatMap(e -> e.getValue().map(
                         v -> Map.entry(e.getKey(), (IOSupplier<BufferedReader>) () -> Files.newBufferedReader(v))
                 ).stream())
@@ -44,9 +47,12 @@ public class RemoteResourcePackImpl extends RemoteResourcePack {
 
     @Override
     protected String minecraftVersion() {
-        return MCPVersion.getMCVersion();
+        var lookup = MethodHandles.lookup();
+        try {
+            var C_MCPVersion = lookup.findClass("net.minecraftforge.versions.mcp.MCPVersion");
+            return (String) lookup.findStatic(C_MCPVersion, "getMCVersion", MethodType.methodType(String.class)).invokeExact();
+        } catch (Throwable t) {
+            throw new RuntimeException("Cannot get Minecraft version", t);
+        }
     }
-
-    private static final RemoteResourcePackImpl INSTANCE = new RemoteResourcePackImpl();
-    public static RemoteResourcePack platform() { return INSTANCE; }
 }

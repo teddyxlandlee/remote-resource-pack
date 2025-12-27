@@ -28,11 +28,10 @@ public class NeoMigrationWarningScreen extends WarningScreen {
 
     @Override
     protected @NotNull Layout addFooterButtons() {
-        assert this.minecraft != null;
         var layout = LinearLayout.horizontal().spacing(8);
         layout.addChild(Button.builder(TAKE_ME_TO_NEO, (arg) -> {
             // open the website
-            net.minecraft.Util.getPlatform().openUri(NEO_SITE);
+            net.minecraft.util.Util.getPlatform().openUri(NEO_SITE);
         }).build());
         layout.addChild(Button.builder(
                 CommonComponents.GUI_PROCEED, (arg) -> onClose()).build()

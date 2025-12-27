@@ -6,5 +6,5 @@ import xland.mcmod.remoteresourcepack.forge.NeoMigrationCandidate;
 
 @Mixin(Minecraft.class)
 @NeoMigrationCandidate
-abstract class Stub {
+public abstract class Stub {
 }

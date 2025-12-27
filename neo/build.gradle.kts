@@ -25,12 +25,18 @@ dependencies {
     // Introduce Forge stubs
     val mcfVersion = "1.21.11-61.0.3"
     compileOnly("net.minecraftforge:javafmllanguage:$mcfVersion") {
-        isTransitive = false
+        isTransitive = true
     }
     compileOnly("net.minecraftforge:fmlloader:$mcfVersion") {
         isTransitive = false
     }
     compileOnly("net.minecraftforge:fmlcore:$mcfVersion") {
+        isTransitive = false
+    }
+    compileOnly("net.minecraftforge:eventbus:7.0-beta.12") {
+        isTransitive = false
+    }
+    compileOnly("net.minecraftforge:forgespi:7.1.5") {
         isTransitive = false
     }
     compileOnly("net.minecraftforge:mergetool-api:1.0")

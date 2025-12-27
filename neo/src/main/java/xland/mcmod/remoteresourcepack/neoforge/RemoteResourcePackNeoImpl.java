@@ -3,6 +3,7 @@ package xland.mcmod.remoteresourcepack.neoforge;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
 import org.apache.commons.io.function.IOSupplier;
+import xland.mcmod.remoteresourcepack.Platform;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
 import java.io.BufferedReader;
@@ -12,6 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Platform.Implementation(Platform.NEO)
 public final class RemoteResourcePackNeoImpl extends RemoteResourcePack {
     public Path getGameDir() {
         return FMLPaths.GAMEDIR.get();
