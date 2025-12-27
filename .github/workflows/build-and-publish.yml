@@ -47,7 +47,7 @@ jobs:
         run: echo "MR_TOKEN=${{ secrets.MODRINTH_TOKEN }}" >> $GITHUB_ENV
 
       - name: Publish to Modrinth
-        run: ./gradlew modrinth
+        run: ./gradlew build modrinth
 
       - name: Upload publish artifacts
         uses: actions/upload-artifact@v4
