@@ -104,7 +104,7 @@ providers.environmentVariable("MR_TOKEN").takeIf { it.isPresent }?.also { mrToke
         autoAddDependsOn.set(false)
 
         uploadFile.set(tasks.jar)
-        additionalFiles.add(tasks["remapSourcesJar"])
+        additionalFiles.add(tasks["sourcesJar"])
 
         debugMode = providers.environmentVariable("MR_DEBUG_MODE").map { "1" == it }.orElse(false)
     }
