@@ -16,7 +16,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
+import java.security.SecureRandom;import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +30,7 @@ import static net.minecraft.util.GsonHelper.*;
 
 final class ZipConfigDownload implements Closeable {
     private static final Base64.Decoder B64DECODER = Base64.getDecoder();
-    private static final ThreadLocal<RandomGenerator> RANDOM = ThreadLocal.withInitial(java.util.Random::new);
+    private static final RandomGenerator RANDOM = new SecureRandom();
     private static final String SKIP_KEY = "mod";
     private static final String PACK_MCMETA = "pack.mcmeta";
 
@@ -40,7 +40,7 @@ final class ZipConfigDownload implements Closeable {
         this.zos = zos;
         this.baseUri = baseUri;
 
-        this.executor = Executors.newSingleThreadExecutor();
+        this.zipOutputWorker = Executors.newSingleThreadExecutor();
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -51,14 +51,14 @@ final class ZipConfigDownload implements Closeable {
 
     @Override
     public void close() throws IOException {
-        this.executor.close();
+        this.zipOutputWorker.close();
         this.httpClient.close();
         this.futures.clear();
         this.zos.close();
     }
 
     private final ZipOutputStream zos;
-    private final ExecutorService executor;
+    private final ExecutorService zipOutputWorker;
     private final HttpClient httpClient;
     private final URI baseUri;
     private final List<CompletableFuture<?>> futures;
@@ -119,7 +119,7 @@ final class ZipConfigDownload implements Closeable {
                 } catch (IOException e) {
                     return CompletableFuture.failedStage(e);
                 }
-            }, executor);
+            }, zipOutputWorker);
         } else {    // a directory or an empty entry
             putEntryFuture = new CompletableFuture<Void>().thenComposeAsync(v -> {
                 try {
@@ -129,7 +129,7 @@ final class ZipConfigDownload implements Closeable {
                 } catch (IOException e) {
                     return CompletableFuture.failedStage(e);
                 }
-            }, executor);
+            }, zipOutputWorker);
         }
         this.futures.add(putEntryFuture);
     }
@@ -206,7 +206,7 @@ final class ZipConfigDownload implements Closeable {
                             totalWeight += (weights[index++] = weight);
                         }
 
-                        int randomNum = RANDOM.get().nextInt(totalWeight);
+                        int randomNum = RANDOM.nextInt(totalWeight);
                         index = 0;
                         for (JsonElement item0 : items) {
                             randomNum -= weights[index++];
