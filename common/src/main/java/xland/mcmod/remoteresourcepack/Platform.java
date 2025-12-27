@@ -11,7 +11,7 @@ import java.util.ServiceLoader;
 public enum Platform {
     FABRIC("net.fabricmc.loader.api.FabricLoader"),
     FORGE("net.minecraftforge.versions.forge.ForgeVersion"),
-    NEO("net.neoforged.fml.ModLoader"),
+    NEO("net.neoforged.fml.FMLVersion"),
     ;
     private final String declaredClass;
 
@@ -52,7 +52,7 @@ public enum Platform {
         Platform value();
     }
 
-    /// Worth caching:
+    /// Recommend caching:
     /// ```java
     /// public static XxxApi getInstance() {
     ///     class Holder {

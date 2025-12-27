@@ -122,7 +122,7 @@ final class ZipConfigDownload implements Closeable {
                 }
             }, zipOutputWorker);
         } else {    // a directory or an empty entry
-            putEntryFuture = new CompletableFuture<Void>().thenComposeAsync(v -> {
+            putEntryFuture = new CompletableFuture<Void>().thenComposeAsync(_ -> {
                 try {
                     zos.putNextEntry(zipEntry);
                     zos.closeEntry();

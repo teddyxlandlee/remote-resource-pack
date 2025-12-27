@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xland.mcmod.remoteresourcepack.fabric.RemoteResourcePackFabric;
 
 @Mixin(Minecraft.class)
-abstract class MixinMinecraft {
+abstract public class MixinMinecraft {
     @Inject(method = "<init>", at = @At(
             value = "INVOKE", target = "Lnet/minecraft/server/packs/repository/PackRepository;reload()V"
     ))

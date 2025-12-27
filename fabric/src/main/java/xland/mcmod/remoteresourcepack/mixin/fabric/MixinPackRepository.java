@@ -11,7 +11,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Mixin(PackRepository.class)    // client only
-abstract class MixinPackRepository implements MutablePackRepository {
+abstract public class MixinPackRepository implements MutablePackRepository {
     @Accessor("sources")
     abstract Set<RepositorySource> remoteResourcePack$getSources();
 
@@ -22,12 +22,10 @@ abstract class MixinPackRepository implements MutablePackRepository {
     @Override
     public void remoteResourcePack$addRepoSource(RepositorySource repositorySource) {
         Set<RepositorySource> set = remoteResourcePack$getSources();
-        try {
-            set.add(repositorySource);
-        } catch (UnsupportedOperationException e) {
+        if (set.getClass() != HashSet.class) {
             set = new HashSet<>(set);
-            set.add(repositorySource);
             remoteResourcePack$setSources(set);
         }
+        set.add(repositorySource);
     }
 }

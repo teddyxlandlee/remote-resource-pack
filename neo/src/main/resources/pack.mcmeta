@@ -1,7 +1,9 @@
 {
   "pack": {
     "description": "RemoteResourcePack resources",
-    "min_format": 65,
-    "max_format": 114514
+    "min_format": 16,
+    "max_format": 114514,
+    "supported_formats": [16, 114514],
+    "pack_format": 76
   }
 }
