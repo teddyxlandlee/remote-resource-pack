@@ -53,7 +53,7 @@ public class RemoteResourcePackForgeEntrypoint {
                 if (M_getPackType.bindTo(event).invoke() != PackType.CLIENT_RESOURCES) return;
                 M_addRepositorySource.bindTo(event).invoke(new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles()));
             } catch (Throwable t) {
-                org.slf4j.LoggerFactory.getLogger(RemoteResourcePackForgeEntrypoint.class).warn(
+                org.slf4j.LoggerFactory.getLogger(RemoteResourcePackForgeEntrypoint.class).error(
                         "Cannot register RRPCacheRepoSource under this Forge environment. "
                         + "Forge environment will be unsupported by RemoteResourcePack soon.", t
                 );

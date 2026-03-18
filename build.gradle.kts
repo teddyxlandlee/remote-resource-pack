@@ -98,7 +98,7 @@ providers.environmentVariable("MR_TOKEN").takeIf { it.isPresent }?.also { mrToke
         changelog.set(providers.gradleProperty("mr_version_changelog"))
         versionType.set(providers.gradleProperty("mr_version_type"))
         gameVersions.set(providers.gradleProperty("mr_version_game").map {
-            it.split(',')
+            it.split(',').map(String::trim)
         })
         detectLoaders.set(false)
         autoAddDependsOn.set(false)
