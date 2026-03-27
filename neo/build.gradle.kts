@@ -23,7 +23,7 @@ dependencies {
     api(project(":common"))
 
     // Introduce Forge stubs
-    val mcfVersion = "1.21.11-61.0.3"
+    val mcfVersion = "26.1-62.0.3"
     compileOnly("net.minecraftforge:javafmllanguage:$mcfVersion") {
         isTransitive = true
     }

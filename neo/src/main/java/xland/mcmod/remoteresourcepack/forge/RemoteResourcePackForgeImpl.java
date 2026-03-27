@@ -30,7 +30,7 @@ public class RemoteResourcePackForgeImpl extends RemoteResourcePack {
 
     @Override
     protected Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
-        return ModList.get().applyForEachModFile(modFile -> Map.entry(
+        return ModList.applyForEachModFile(modFile -> Map.entry(
                         modFile.getModInfos().getFirst().getModId(),
                         Optional.of(modFile.findResource("RemoteResourcePack.json")).filter(Files::exists)
                 ))

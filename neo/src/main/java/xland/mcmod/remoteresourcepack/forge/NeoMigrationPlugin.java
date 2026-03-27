@@ -1,15 +1,21 @@
 package xland.mcmod.remoteresourcepack.forge;
 
+import com.google.common.base.Suppliers;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public class NeoMigrationPlugin implements IMixinConfigPlugin {
     private static final Collection<String> patchedMethodCandidate = Collections.singleton("addInitialScreens");
@@ -51,9 +57,26 @@ public class NeoMigrationPlugin implements IMixinConfigPlugin {
         return null;
     }
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(NeoMigrationPlugin.class);
+    private static final Supplier<Boolean> DISABLES_MIXIN = Suppliers.memoize(() -> {
+        Path path = null;
+        try {
+            Path parentFolder = net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get();
+            path = parentFolder.resolve("rrp-neo-migration-screen.disable");
+        } catch (Throwable _) {
+        }
+
+        // If file state undetermined, return `false`, i.e. do not disable mixin
+        var disable = path != null && Files.exists(path);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("{} NeoMigrationPlugin", disable ? "Disabled" : "Enabled");
+        }
+        return disable;
+    });
+
     @Override
     public boolean shouldApplyMixin(String s, String s1) {
-        return true;
+        return !DISABLES_MIXIN.get();
     }
 
     @Override
