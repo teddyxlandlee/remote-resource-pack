@@ -1,0 +1,50 @@
+# See https://stonecutter.kikugie.dev/wiki/config/properties#centralized-properties
+mod.id = "remoteresourcepack"
+mod.name = "Remote Resource Pack"
+mod.group = "xland.mcmod"
+mod.version = "3.0.0"
+
+deps.fabric_loader = "0.19.3"
+loomx.loom_version = "1.17-SNAPSHOT"
+
+["1.21.1"]
+# List of releases to be marked compatible on Modrinth/Curseforge
+mod.mc_releases = ["1.21", "1.21.1"]
+
+
+[fabric."1.21.1"]
+# Mod compatibility range in fabric.mod.json/neoforge.mods.toml
+mod.mc_compat = ">=1.21 <=1.21.1"
+deps.fabric_api = "0.116.13+1.21.1"
+
+
+[neoforge."1.21.1"]
+mod.mc_compat = "[1.21, 1.21.1]"
+deps.neo_loader = "21.1.234"
+
+
+["1.21.11"]
+mod.mc_releases = ["1.21.11"]
+
+
+[fabric."1.21.11"]
+mod.mc_compat = "1.21.11"
+deps.fabric_api = "0.141.4+1.21.11"
+
+[neoforge."1.21.11"]
+mod.mc_compat = "[1.21.11]"
+deps.neo_loader = "21.11.42"
+
+
+["26.2.x"]
+mod.mc_releases = ["26.1", "26.1.1", "26.1.2", "26.2"]
+
+
+[fabric."26.2.x"]
+mod.mc_compat = ">=26.1"
+deps.fabric_api = "0.153.0+26.2"
+
+
+[neoforge."26.2.x"]
+mod.mc_compat = "[26.1,)"
+deps.neo_loader = "26.2.0.7-beta"

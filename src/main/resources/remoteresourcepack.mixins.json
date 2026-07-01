@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "xland.mcmod.remoteresourcepack.mixin",
+  "compatibilityLevel": "${java}",
+  "client": [
+    "MixinOptions"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

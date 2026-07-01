@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "${id}",
+  "version": "${version}",
+
+  "name": "${name}",
+  "description": "Load resource pack content from the internet",
+  "authors": [
+    "teddyxlandlee"
+  ],
+  "contributors": [
+
+  ],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/remote-resource-pack",
+    "sources": "https://github.com/teddyxlandlee/remote-resource-pack"
+  },
+
+  "license": "MIT",
+  "icon": "RRP_Icon.png",
+
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "xland.mcmod.remoteresourcepack.fabric.RemoteResourcePackFabric::init"
+    ]
+  },
+  "mixins": [
+    "remoteresourcepack.mixins.json",
+    "remoteresourcepack-fabric.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19",
+    "minecraft": "${minecraft}"
+  },
+  "recommends": {
+    "fabric-resource-loader-v1": "*"
+  }
+}
