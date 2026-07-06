@@ -1,6 +1,7 @@
 plugins {
     // This plugin applies the correct loom variant based on the Minecraft version
     id("dev.kikugie.loom-back-compat")
+    id("platform-convention")
 }
 
 // DO NOT set group = ...!
@@ -89,13 +90,24 @@ tasks {
         exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml", "pack.mcmeta")
     }
 
+    val modJar = loomx.modJar.flatMap { it.archiveFile }
+    val modSourcesJar = loomx.modSourcesJar.flatMap { it.archiveFile }
+
+    destArtifacts {
+        binaryJar = modJar
+        sourcesJar = modSourcesJar
+
+        versionInfo.display.set(sc.properties["mod.mc_releases_display"] as String)
+        versionInfo.range.set(sc.properties.raw("mod", "mc_releases").asList().map(Any?::toString))
+    }
+
     register<Copy>("buildAndCollect") {
         group = "build"
         description = "Builds mod jars and copies results to `build/libs/{mod version}/`"
 
         inputs.property("version", project.property("mod.version"))
         // loomx.mod(Sources)Jar returns the jar task for the applied loom variant
-        from(loomx.modJar.flatMap { it.archiveFile }, loomx.modSourcesJar.flatMap { it.archiveFile })
+        from(modJar, modSourcesJar)
         into(rootProject.layout.buildDirectory.file("libs/${project.property("mod.version")}"))
     }
 }

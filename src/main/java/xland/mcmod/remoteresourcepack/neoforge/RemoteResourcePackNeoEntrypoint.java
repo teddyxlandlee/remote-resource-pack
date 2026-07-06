@@ -20,7 +20,7 @@ public class RemoteResourcePackNeoEntrypoint {
         RemoteResourcePack.init();
         bus.addListener(AddPackFindersEvent.class, event -> {
             if (event.getPackType() != PackType.CLIENT_RESOURCES) return;
-            event.addRepositorySource(new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles()));
+            event.addRepositorySource(RRPCacheRepoSource.ofCached());
         });
     }
 

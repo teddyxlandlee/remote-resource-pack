@@ -57,9 +57,7 @@ public final class RemoteResourcePackFabric extends RemoteResourcePack {
     }
 
     public static void addPackSource(PackRepository packRepository) {
-        ((MutablePackRepository) packRepository).remoteResourcePack$addRepoSource(
-                new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles())
-        );
+        ((MutablePackRepository) packRepository).remoteResourcePack$addRepoSource(RRPCacheRepoSource.ofCached());
     }
 
     protected String minecraftVersion() {

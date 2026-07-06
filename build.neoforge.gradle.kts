@@ -74,12 +74,23 @@ tasks {
         dependsOn("stonecutterGenerate")
     }
 
+    val modJar = jar.flatMap { it.archiveFile }
+    val modSourcesJar = named<Jar>("sourcesJar").flatMap { it.archiveFile }
+
+    destArtifacts {
+        binaryJar = modJar
+        sourcesJar = modSourcesJar
+
+        versionInfo.display.set(sc.properties["mod.mc_releases_display"] as String)
+        versionInfo.range.set(sc.properties.raw("mod", "mc_releases").asList().map(Any?::toString))
+    }
+
     register<Copy>("buildAndCollect") {
         group = "build"
         description = "Builds mod jars and copies results to `build/libs/{mod version}/`"
 
         inputs.property("version", project.property("mod.version"))
-        from(jar.flatMap { it.archiveFile }, named<Jar>("sourcesJar").flatMap { it.archiveFile })
+        from(modJar, modSourcesJar)
         into(rootProject.layout.buildDirectory.file("libs/${project.property("mod.version")}"))
     }
 }

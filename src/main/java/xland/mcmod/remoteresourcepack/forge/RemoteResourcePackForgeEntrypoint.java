@@ -28,12 +28,16 @@ public class RemoteResourcePackForgeEntrypoint {
         }
 
         RemoteResourcePack.init();
-        ctx.getModEventBus().addListener(RemoteResourcePackForgeEntrypoint::addPackFinder);
+        //? if <=1.21.5 {
+        /^ctx.getModEventBus().addListener(RemoteResourcePackForgeEntrypoint::addPackFinder);
+        ^///?} else {
+        AddPackFindersEvent.BUS.addListener(RemoteResourcePackForgeEntrypoint::addPackFinder);
+        //?}
     }
 
     private static void addPackFinder(AddPackFindersEvent event) {
         if (event.getPackType() != PackType.CLIENT_RESOURCES) return;
-        event.addRepositorySource(new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles()));
+        event.addRepositorySource(RRPCacheRepoSource.ofCached());
     }
 
     static final AtomicReference<String> MOD_VERSION = new AtomicReference<>();

@@ -33,6 +33,10 @@ public class RRPCacheRepoSource implements RepositorySource {
         this.knownCaches = Collections.unmodifiableMap(knownCaches);
     }
 
+    public static RRPCacheRepoSource ofCached() {
+        return new RRPCacheRepoSource(RemoteResourcePack.getCacheFiles());
+    }
+
     private static final Gson GSON = new Gson();
     private static final String FORCE_COMPATIBLE = "remoteresourcepack:force_compatible";
 

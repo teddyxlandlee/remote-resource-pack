@@ -1,8 +1,11 @@
+import org.gradle.kotlin.dsl.assign
 import java.time.Instant
 
 plugins {
     id("net.minecraftforge.gradle") version "7.+"
     id("net.minecraftforge.renamer") version "1.+"
+    id("forge-mutex")
+    id("platform-convention")
 }
 
 base.archivesName = "${property("mod.id") as String}-forge"
@@ -59,7 +62,6 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 java {
-    withSourcesJar()
     toolchain.languageVersion = JavaLanguageVersion.of(requiredJava.majorVersion)
 }
 
@@ -105,14 +107,32 @@ tasks {
         archiveClassifier = "dev-sources"
     }
 
-    val modJar = renamer.classes(jar) {
-        archiveClassifier = null as String?
+    val is1205OrLater = sc.current.version >= "1.20.5"
+
+    val modJar = if (is1205OrLater) {
+        jar.flatMap { it.archiveFile }
+    } else {
+        renamer.classes(jar) {
+            archiveClassifier = null as String?
+        }.flatMap { it.output }
     }
 
-    val modSourcesJar = renamer.sources(sourcesJar) {
-        apply {
-            archiveClassifier = "sources"
-        }
+    val modSourcesJar = if (is1205OrLater) {
+        sourcesJar.archiveFile
+    } else {
+        renamer.sources(sourcesJar) {
+            apply {
+                archiveClassifier = "sources"
+            }
+        }.apply.flatMap { it.output }
+    }
+
+    destArtifacts {
+        binaryJar = modJar
+        this.sourcesJar = modSourcesJar
+
+        versionInfo.display.set(sc.properties["mod.mc_releases_display"] as String)
+        versionInfo.range.set(sc.properties.raw("mod", "mc_releases").asList().map(Any?::toString))
     }
 
     register<Copy>("buildAndCollect") {
@@ -120,7 +140,7 @@ tasks {
         description = "Builds mod jars and copies result to `build/libs/{mod version}/`"
 
         inputs.property("version", project.property("mod.version"))
-        from(modJar.flatMap { it.output }, modSourcesJar.file)
+        from(modJar, modSourcesJar)
         into(rootProject.layout.buildDirectory.file("libs/${project.property("mod.version")}"))
     }
 }
