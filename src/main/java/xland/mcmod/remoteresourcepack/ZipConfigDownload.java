@@ -49,15 +49,20 @@ final class ZipConfigDownload implements Closeable {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
                 .followRedirects(HttpClient.Redirect.NORMAL)
-                .executor(Executors.newVirtualThreadPerTaskExecutor())
+                .executor(/*? if java: >= 21 {*/Executors.newVirtualThreadPerTaskExecutor()/*?} else {*//*LegacyExecutorCloser.cachedThreadPool()*//*?}*/)
                 .build();
         this.futures = new CopyOnWriteArrayList<>();
     }
 
     @Override
     public void close() throws IOException {
+        //? if java: >= 21 {
         this.zipOutputWorker.close();
         this.httpClient.close();
+        //?} else {
+        /*LegacyExecutorCloser.close(this.zipOutputWorker);
+        LegacyExecutorCloser.close(this.httpClient);
+        *///?}
         this.futures.clear();
         this.zos.close();
     }

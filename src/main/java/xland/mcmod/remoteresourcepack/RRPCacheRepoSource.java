@@ -1,7 +1,6 @@
 package xland.mcmod.remoteresourcepack;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.*;
@@ -56,11 +55,27 @@ public class RRPCacheRepoSource implements RepositorySource {
         }
         JsonObject packObj = GsonHelper.getAsJsonObject(rootObj, "pack");
 
-        // 1.21.9+
+        //? if >= 1.21.9 {
         packObj.addProperty("min_format", 65);  // the version that defines min/max_format
         packObj.addProperty("max_format", Integer.MAX_VALUE);
         packObj.remove("supported_formats");
         packObj.remove("pack_format");
+        //?} elif >= 1.20.2 {
+        /*var supportedFormats = new JsonArray(); {
+            supportedFormats.add(16);   // the version that defines supported_formats
+            supportedFormats.add(64);   // the next version defines min_format
+        }
+        packObj.add("supported_formats", supportedFormats);
+        packObj.addProperty("pack_format", 16);
+        packObj.remove("min_format");
+        packObj.remove("max_format");
+        *///?} else {
+        /*// Legacy Minecraft was a noob
+        packObj.addProperty("pack_format", net.minecraft.DetectedVersion.BUILT_IN.getPackVersion(PackType.CLIENT_RESOURCES));
+        packObj.remove("min_format");
+        packObj.remove("max_format");
+        packObj.remove("supported_formats");
+        *///?}
         return rootObj.toString().getBytes(StandardCharsets.UTF_8);
     }
 
@@ -75,8 +90,8 @@ public class RRPCacheRepoSource implements RepositorySource {
                     new PackLocationInfo(
                             packId,
                             Component.translatable("pack.source.mod.remoteresourcepack")
-                            .append(" #")
-                            .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27))),
+                                .append(" #")
+                                .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27))),
                             PACK_SOURCE,
                             Optional.empty()
                     ),

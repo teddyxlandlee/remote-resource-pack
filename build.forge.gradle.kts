@@ -2,17 +2,23 @@ import java.time.Instant
 
 plugins {
     id("net.minecraftforge.gradle") version "7.+"
+    id("net.minecraftforge.renamer") version "1.+"
 }
 
 base.archivesName = "${property("mod.id") as String}-forge"
 version = "${property("mod.version")}+${sc.current.version}"
 
 repositories {
-    maven("https://maven.minecraftforge.net/")
+    minecraft.mavenizer(this)
+    mavenCentral()
+    maven(fg.forgeMaven)
+    maven(fg.minecraftLibsMaven)
 }
 
 minecraft {
     mappings("official", sc.current.version)
+    renamer.mappings("official", sc.current.version)
+
     runs {
         val modId = sc.properties["mod.id"] as String
         configureEach {
@@ -81,7 +87,6 @@ tasks {
     }
 
     jar {
-        finalizedBy("reobfJar")
         manifest {
             attributes(
                 "Specification-Title" to project.property("mod.id") as String,
@@ -93,5 +98,30 @@ tasks {
                 "Implementation-Timestamp" to Instant.now(),
             )
         }
+        archiveClassifier = "dev"
+    }
+
+    val sourcesJar = getByName<AbstractArchiveTask>("sourcesJar") {
+        archiveClassifier = "dev-sources"
+    }
+
+    val modJar = renamer.classes(jar) {
+        archiveClassifier = null as String?
+    }
+
+    val modSourcesJar = renamer.sources(sourcesJar) {
+        apply {
+            archiveClassifier = "sources"
+        }
+    }
+
+    register<Copy>("buildAndCollect") {
+        group = "build"
+        description = "Builds mod jars and copies result to `build/libs/{mod version}/`"
+
+        inputs.property("version", project.property("mod.version"))
+        from(modJar.flatMap { it.output }, modSourcesJar.file)
+        into(rootProject.layout.buildDirectory.file("libs/${project.property("mod.version")}"))
     }
 }
+

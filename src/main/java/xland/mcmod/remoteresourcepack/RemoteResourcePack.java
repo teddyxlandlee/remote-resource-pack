@@ -14,7 +14,7 @@ import xland.mcmod.remoteresourcepack.fabric.RemoteResourcePackFabric;
 //? if neoforge
 //import xland.mcmod.remoteresourcepack.neoforge.RemoteResourcePackNeo;
 //? if forge
-//import xland.mcmod.remoteresourcepack.forge.RemoteResourcePackForge
+//import xland.mcmod.remoteresourcepack.forge.RemoteResourcePackForge;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -162,7 +162,11 @@ public abstract class RemoteResourcePack {
         LOGGER.info("Downloading + generating files");
 
         final ConcurrentMap<String, Path> cacheFilesPerHash = new ConcurrentHashMap<>();
-        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        //? if java: >= 21 {
+        try (final var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        //?} else {
+        /*try (final var executor = LegacyExecutorCloser.cachedThreadPool()) {
+        *///?}
             CopyOnWriteArrayList<CompletableFuture<?>> futures = new CopyOnWriteArrayList<>();
             AtomicInteger cc = new AtomicInteger();
 
