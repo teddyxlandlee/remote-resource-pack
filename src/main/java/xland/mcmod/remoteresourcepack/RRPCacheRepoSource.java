@@ -82,23 +82,36 @@ public class RRPCacheRepoSource implements RepositorySource {
     @Override
     public void loadPacks(@NotNull Consumer<Pack> consumer) {
         for (Map.Entry<String, Path> entry : knownCaches.entrySet()) {
-            String packId = RemoteResourcePack.packName(entry.getKey());
-            Path zipFile = entry.getValue();
+            final String packId = RemoteResourcePack.packName(entry.getKey());
+            final Path zipFile = entry.getValue();
             // Now we don't support pack.mcmeta force-modification
+            final Component packDescription = Component.translatable("pack.source.mod.remoteresourcepack")
+                    .append(" #")
+                    .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27)));
+            //? if > 1.20.1 {
             Pack.ResourcesSupplier resourcesSupplier = new FilePackResources.FileResourcesSupplier(getZipFile(zipFile));
-            Pack pack = Pack.readMetaAndCreate(
+            final Pack pack = Pack.readMetaAndCreate(
                     new PackLocationInfo(
                             packId,
-                            Component.translatable("pack.source.mod.remoteresourcepack")
-                                .append(" #")
-                                .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27))),
+                            packDescription,
                             PACK_SOURCE,
                             Optional.empty()
                     ),
                     resourcesSupplier,
                     PackType.CLIENT_RESOURCES,
-                    new PackSelectionConfig(false, Pack.Position.TOP, false)
+                    new PackSelectionConfig(/*required=*/false, Pack.Position.TOP, /*fixedPosition=*/false)
             );
+            //?} else {
+            /*final Pack pack = Pack.readMetaAndCreate(
+                    packId,
+                    packDescription,
+                    /^required=^/false,
+                    (final String packName) -> new FilePackResources(packName, getZipFile(zipFile), /^isBuiltin=^/false),
+                    PackType.CLIENT_RESOURCES,
+                    Pack.Position.TOP,
+                    PACK_SOURCE
+            );
+            *///?}
             Objects.requireNonNull(pack, () -> "Missing pack meta for " + packId);
             consumer.accept(pack);
         }
