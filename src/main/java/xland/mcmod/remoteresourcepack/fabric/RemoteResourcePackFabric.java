@@ -1,5 +1,6 @@
 package xland.mcmod.remoteresourcepack.fabric;
 
+//? if fabric {
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.packs.repository.PackRepository;
 import org.apache.commons.io.function.IOSupplier;
@@ -65,3 +66,4 @@ public final class RemoteResourcePackFabric extends RemoteResourcePack {
         return getModVersion("minecraft");
     }
 }
+//?}

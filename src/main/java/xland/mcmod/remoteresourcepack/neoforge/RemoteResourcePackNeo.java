@@ -14,6 +14,12 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public final class RemoteResourcePackNeo extends RemoteResourcePack {
+    private static final RemoteResourcePackNeo INSTANCE = new RemoteResourcePackNeo();
+
+    public static RemoteResourcePackNeo getInstance() {
+        return INSTANCE;
+    }
+
     public Path getGameDir() {
         return FMLPaths.GAMEDIR.get();
     }

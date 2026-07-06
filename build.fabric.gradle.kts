@@ -4,42 +4,21 @@ plugins {
 }
 
 // DO NOT set group = ...!
-version = "${property("mod.version")}+${sc.current.version}"
 base.archivesName = "${property("mod.id") as String}-fabric"
-
-val requiredJava: JavaVersion = when {
-    sc.current.parsed >= "26.1" -> JavaVersion.VERSION_25
-    sc.current.parsed >= "1.20.5" -> JavaVersion.VERSION_21
-    sc.current.parsed >= "1.18" -> JavaVersion.VERSION_17
-    sc.current.parsed >= "1.17" -> JavaVersion.VERSION_16
-    else -> JavaVersion.VERSION_1_8
-}
+version = "${property("mod.version")}+${sc.current.version}"
 
 // This can be used for publishing on Modrinth and Curseforge
 val compatibleVersions: List<String> = sc.properties.rawOrNull("mod", "mc_releases")
     ?.asList().orEmpty().map { it.toString() }
 
-repositories {
-    /**
-     * Restricts dependency search of the given [groups] to the [maven URL][url],
-     * improving the setup speed.
-     */
-    fun strictMaven(url: String, alias: String, vararg groups: String) = exclusiveContent {
-        forRepository { maven(url) { name = alias } }
-        filter { groups.forEach(::includeGroup) }
-    }
-    strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
-    strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
-}
-
 dependencies {
-    /**
-     * Fetches only the required Fabric API modules to not waste time downloading all of them for each version.
-     * @see <a href="https://github.com/FabricMC/fabric">List of Fabric API modules</a>
-     */
-    fun fapi(vararg modules: String) {
-        for (it in modules) modImplementation(fabricApi.module(it, sc.properties["deps.fabric_api"]))
-    }
+//    /**
+//     * Fetches only the required Fabric API modules to not waste time downloading all of them for each version.
+//     * @see <a href="https://github.com/FabricMC/fabric">List of Fabric API modules</a>
+//     */
+//    fun fapi(vararg modules: String) {
+//        for (it in modules) modImplementation(fabricApi.module(it, sc.properties["deps.fabric_api"]))
+//    }
 
     minecraft("com.mojang:minecraft:${sc.current.version}")
     // Applies Mojang Mappings on obfuscated versions
@@ -69,15 +48,22 @@ loom {
     }
 }
 
+val requiredJava: JavaVersion = when {
+    sc.current.parsed >= "26.1" -> JavaVersion.VERSION_25
+    sc.current.parsed >= "1.20.5" -> JavaVersion.VERSION_21
+//    sc.current.parsed >= "1.18" -> JavaVersion.VERSION_17
+//    sc.current.parsed >= "1.17" -> JavaVersion.VERSION_16
+//    else -> JavaVersion.VERSION_1_8
+    else -> JavaVersion.VERSION_17
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release = requiredJava.ordinal + 1
+}
+
 java {
     withSourcesJar()
-    targetCompatibility = requiredJava
-    sourceCompatibility = requiredJava
-
-    toolchain {
-        vendor = JvmVendorSpec.MICROSOFT
-        languageVersion = JavaLanguageVersion.of(requiredJava.majorVersion)
-    }
+    toolchain.languageVersion = JavaLanguageVersion.of(requiredJava.majorVersion)
 }
 
 tasks {
@@ -100,7 +86,7 @@ tasks {
         val mixinJava = "JAVA_${requiredJava.majorVersion}"
         filesMatching("*.mixins.json") { expand("java" to mixinJava) }
 
-        exclude("META-INF/neoforge.mods.toml")
+        exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml", "pack.mcmeta")
     }
 
     register<Copy>("buildAndCollect") {

@@ -31,7 +31,11 @@ import static net.minecraft.util.GsonHelper.*;
 
 final class ZipConfigDownload implements Closeable {
     private static final Base64.Decoder B64DECODER = Base64.getDecoder();
+    //? if java: >=25 {
     private static final ScopedValue<RandomGenerator> RANDOM = ScopedValue.newInstance();
+    //?} else {
+    /*private static final ThreadLocal<RandomGenerator> RANDOM = new ThreadLocal<>();
+    *///?}
     private static final String SKIP_KEY = "mod";
     private static final String PACK_MCMETA = "pack.mcmeta";
 
@@ -122,7 +126,7 @@ final class ZipConfigDownload implements Closeable {
                 }
             }, zipOutputWorker);
         } else {    // a directory or an empty entry
-            putEntryFuture = new CompletableFuture<Void>().thenComposeAsync(_ -> {
+            putEntryFuture = new CompletableFuture<Void>().thenComposeAsync(ignore -> {
                 try {
                     zos.putNextEntry(zipEntry);
                     zos.closeEntry();
@@ -154,10 +158,20 @@ final class ZipConfigDownload implements Closeable {
     static void generateZip(JsonObject zipConfig, URI baseUri,
                             Map<String, String> args, Path dest)
             throws IOException, CompletionException {
-        ScopedValue.where(RANDOM, new Random()).call(() -> {
+        final RandomGenerator rng = new Random();
+        //? if java: >= 25 {
+        ScopedValue.where(RANDOM, rng).call(() -> {
             internalGenerateZip(zipConfig, baseUri, args, dest);
             return null;
         });
+        //?} else {
+        /*try {
+            RANDOM.set(rng);
+            internalGenerateZip(zipConfig, baseUri, args, dest);
+        } finally {
+            RANDOM.remove();    // gc
+        }
+        *///?}
     }
 
     private static void internalGenerateZip(JsonObject zipConfig, URI baseUri,

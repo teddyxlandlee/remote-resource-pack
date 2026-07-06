@@ -7,6 +7,21 @@ mod.version = "3.0.0"
 deps.fabric_loader = "0.19.3"
 loomx.loom_version = "1.17-SNAPSHOT"
 
+
+["1.20.1"]
+mod.mc_releases = ["1.20", "1.20.1"]
+
+
+[fabric."1.20.1"]
+mod.mc_compat = ">=1.20- <=1.20.1"
+deps.fabric_api = "0.92.9+1.20.1"
+
+
+[forge."1.20.1"]
+mod.mc_compat = "[1.20, 1.20.1]"
+deps.forge = "1.20.1-47.4.20"
+
+
 ["1.21.1"]
 # List of releases to be marked compatible on Modrinth/Curseforge
 mod.mc_releases = ["1.21", "1.21.1"]
@@ -14,7 +29,7 @@ mod.mc_releases = ["1.21", "1.21.1"]
 
 [fabric."1.21.1"]
 # Mod compatibility range in fabric.mod.json/neoforge.mods.toml
-mod.mc_compat = ">=1.21 <=1.21.1"
+mod.mc_compat = ">=1.21- <=1.21.1"
 deps.fabric_api = "0.116.13+1.21.1"
 
 
@@ -28,7 +43,7 @@ mod.mc_releases = ["1.21.11"]
 
 
 [fabric."1.21.11"]
-mod.mc_compat = "1.21.11"
+mod.mc_compat = ">1.21.10 <2"
 deps.fabric_api = "0.141.4+1.21.11"
 
 [neoforge."1.21.11"]
@@ -41,7 +56,7 @@ mod.mc_releases = ["26.1", "26.1.1", "26.1.2", "26.2"]
 
 
 [fabric."26.2.x"]
-mod.mc_compat = ">=26.1"
+mod.mc_compat = ">=26.1-"
 deps.fabric_api = "0.153.0+26.2"
 
 

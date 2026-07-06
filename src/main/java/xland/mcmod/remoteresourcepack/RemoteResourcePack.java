@@ -12,7 +12,9 @@ import org.apache.logging.log4j.MarkerManager;
 //? if fabric
 import xland.mcmod.remoteresourcepack.fabric.RemoteResourcePackFabric;
 //? if neoforge
-/*import xland.mcmod.remoteresourcepack.neoforge.RemoteResourcePackNeo;*/
+//import xland.mcmod.remoteresourcepack.neoforge.RemoteResourcePackNeo;
+//? if forge
+//import xland.mcmod.remoteresourcepack.forge.RemoteResourcePackForge
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -40,8 +42,10 @@ public abstract class RemoteResourcePack {
         //? if fabric {
         return RemoteResourcePackFabric.getInstance();
         //?} elif neoforge {
-        /*return RemoteResourcePackNeo.getInstance();*/
-        //?} else {
+        /*return RemoteResourcePackNeo.getInstance();
+        *///?} elif forge {
+        /*return RemoteResourcePackForge.getInstance();
+        *///?} else {
         /*throw new IllegalStateException("Unimplemented platform")*/
         //?}
     }

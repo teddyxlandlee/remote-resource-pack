@@ -22,6 +22,14 @@ stonecutter parameters {
     swaps["minecraft"] = "\"${node.metadata.version}\";"
 //    constants["release"] = properties.get<String>("mod.id") != "template"
 //    dependencies["fapi"] = properties.getOrNull<String>("deps.fabric_api") ?: "0"
+    dependencies["java"] = when {
+        current.parsed >= "26.1" -> "25"
+        current.parsed >= "1.20.5" -> "21"
+//        current.parsed >= "1.18" -> "17"
+//        current.parsed >= "1.17" -> "16"
+//        else -> "8"
+        else -> "17"
+    }
 
     replacements {
         string(current.parsed >= "1.21.11") {
