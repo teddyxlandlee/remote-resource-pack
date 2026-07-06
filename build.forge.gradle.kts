@@ -1,4 +1,3 @@
-import org.gradle.kotlin.dsl.assign
 import java.time.Instant
 
 plugins {
@@ -20,7 +19,6 @@ repositories {
 
 minecraft {
     mappings("official", sc.current.version)
-    renamer.mappings("official", sc.current.version)
 
     runs {
         val modId = sc.properties["mod.id"] as String
@@ -45,7 +43,11 @@ minecraft {
 }
 
 dependencies {
-    implementation(minecraft.dependency("net.minecraftforge:forge:${property("deps.forge")}"))
+    val mavenizer = minecraft.dependency("net.minecraftforge:forge:${property("deps.forge")}")
+    implementation(mavenizer)
+    runCatching { mavenizer.toSrgFile.get() }.map { f ->
+        renamer.setMappings(files(f))
+    }
 }
 
 val requiredJava: JavaVersion = when {
@@ -62,6 +64,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 java {
+    withSourcesJar()
     toolchain.languageVersion = JavaLanguageVersion.of(requiredJava.majorVersion)
 }
 
@@ -88,6 +91,8 @@ tasks {
         exclude("fabric.mod.json", "META-INF/neoforge.mods.toml", "*.ct", "*.classtweaker")
     }
 
+    val is1205OrLater = sc.current.version >= "1.20.5"
+
     jar {
         manifest {
             attributes(
@@ -100,14 +105,10 @@ tasks {
                 "Implementation-Timestamp" to Instant.now(),
             )
         }
-        archiveClassifier = "dev"
+        if (!is1205OrLater) {
+            archiveClassifier = "dev"
+        }
     }
-
-    val sourcesJar = getByName<AbstractArchiveTask>("sourcesJar") {
-        archiveClassifier = "dev-sources"
-    }
-
-    val is1205OrLater = sc.current.version >= "1.20.5"
 
     val modJar = if (is1205OrLater) {
         jar.flatMap { it.archiveFile }
@@ -117,19 +118,12 @@ tasks {
         }.flatMap { it.output }
     }
 
-    val modSourcesJar = if (is1205OrLater) {
-        sourcesJar.archiveFile
-    } else {
-        renamer.sources(sourcesJar) {
-            apply {
-                archiveClassifier = "sources"
-            }
-        }.apply.flatMap { it.output }
-    }
+    // Everybody uses official mappings so the source mapping does not matter
+    val modSourcesJar = getByName<AbstractArchiveTask>("sourcesJar").archiveFile
 
     destArtifacts {
         binaryJar = modJar
-        this.sourcesJar = modSourcesJar
+        sourcesJar = modSourcesJar
 
         versionInfo.display.set(sc.properties["mod.mc_releases_display"] as String)
         versionInfo.range.set(sc.properties.raw("mod", "mc_releases").asList().map(Any?::toString))

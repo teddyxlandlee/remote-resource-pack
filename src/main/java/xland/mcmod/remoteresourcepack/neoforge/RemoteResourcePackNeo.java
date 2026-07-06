@@ -7,6 +7,7 @@ import org.apache.commons.io.function.IOSupplier;
 import xland.mcmod.remoteresourcepack.RemoteResourcePack;
 
 import java.io.BufferedReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
@@ -29,14 +30,19 @@ public final class RemoteResourcePackNeo extends RemoteResourcePack {
     }
 
     public Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
-        return ModList.get().applyForEachModFile(modFile -> Map.entry(
-                modFile.getModInfos().getFirst().getModId(),
-                Optional.ofNullable(modFile.getContents().get("RemoteResourcePack.json"))
-        ))
-                .flatMap(e -> e.getValue().map(
-                        v -> Map.entry(e.getKey(), (IOSupplier<BufferedReader>) v::bufferedReader)
-                ).stream())
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+        return ModList.get().applyForEachModFile(modFile -> {
+            final IOSupplier<BufferedReader> supplier;
+            //? if <1.21.11 {
+            /^final var path = modFile.findResource("RemoteResourcePack.json");   // java.nio.file.Path
+            if (Files.notExists(path)) return null;
+            supplier = () -> Files.newBufferedReader(path);
+            ^///?} else {
+            final var resource = modFile.getContents().get("RemoteResourcePack.json");
+            if (resource == null) return null;  // non-exist
+            supplier = resource::bufferedReader;
+            //?}
+            return Map.entry(modFile.getModInfos().getFirst().getModId(), supplier);
+        }).filter(Objects::nonNull).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public String modVersion() {

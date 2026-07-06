@@ -3,7 +3,7 @@ name: Build / Publish to Modrinth
 on:
   push:
     branches:
-      - '26.1'
+      - 'master'
   workflow_dispatch:
 
 jobs:
@@ -12,22 +12,22 @@ jobs:
     if: startsWith(github.event.head_commit.message, '[ci build]')
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '25'
           distribution: 'microsoft'
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew buildAndCollect
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-artifacts
-          path: '**/build/libs/*'
+          path: 'build/libs/*/*.jar'
           if-no-files-found: ignore
 
   publish:
@@ -35,10 +35,10 @@ jobs:
     if: startsWith(github.event.head_commit.message, '[ci publish]')
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '25'
           distribution: 'microsoft'
@@ -47,11 +47,11 @@ jobs:
         run: echo "MR_TOKEN=${{ secrets.MODRINTH_TOKEN }}" >> $GITHUB_ENV
 
       - name: Publish to Modrinth
-        run: ./gradlew build modrinth
+        run: ./gradlew buildAndCollect modrinth
 
       - name: Upload publish artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: publish-artifacts
-          path: '**/build/libs/*'
+          path: 'build/libs/*/*.jar'
           if-no-files-found: ignore

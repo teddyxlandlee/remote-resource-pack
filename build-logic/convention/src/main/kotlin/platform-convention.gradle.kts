@@ -67,17 +67,17 @@ modrinth {
         // 1: MC version range, 2: loader name, 3: mod abbreviation 4: version displayed
         String.format(
             Locale.ENGLISH, template.get(),
-            property("mod.mc_releases_display"),
+            destArtifacts.versionInfo.display.get(),
             loader.abbreviation,
             findProperty("mr_version_mod_abbr"),
-            project.version,
+            "${project.version}".substringBeforeLast('+'),
         )
     }
     changelog = providers.gradleProperty("mr_version_changelog")
     file = destArtifacts.binaryJar
     additionalFiles = listOf(destArtifacts.sourcesJar)
     versionType = providers.gradleProperty("mr_version_type")
-//    gameVersions = (property("mod.mc_releases") as List<*>).map(Any?::toString)
+    gameVersions = destArtifacts.versionInfo.range
     loaders = loader.supported
 
     debugMode = providers.environmentVariable("MR_DEBUG").orElse("").map(String::isNotBlank)

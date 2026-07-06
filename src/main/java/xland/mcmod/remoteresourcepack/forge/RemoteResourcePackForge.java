@@ -12,7 +12,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class RemoteResourcePackForge extends RemoteResourcePack {
@@ -34,14 +33,13 @@ public class RemoteResourcePackForge extends RemoteResourcePack {
 
     @Override
     protected Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
-        return ModList/^?if <26 {^//^.get()^//^?}^/.applyForEachModFile(modFile -> Map.entry(
-                modFile.getModInfos().get(0).getModId(),
-                Optional.ofNullable(modFile.findResource("RemoteReesourcePack.json"))
-        ))
-                .flatMap(e -> e.getValue().map(
-                        v -> Map.entry(e.getKey(), (IOSupplier<BufferedReader>) () -> Files.newBufferedReader(v))
-                ).stream())
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+        return ModList/^? if <26 {^//^.get()^//^?}^/.applyForEachModFile(modFile -> {
+            final var path = modFile.findResource("RemoteResourcePack.json");
+            if (Files.notExists(path)) return null;
+
+            final IOSupplier<BufferedReader> supplier = () -> Files.newBufferedReader(path);
+            return Map.entry(modFile.getModInfos().get(0).getModId(), supplier);
+        }).filter(Objects::nonNull).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override
