@@ -1,0 +1,57 @@
+name: Build / Publish to Modrinth
+
+on:
+  push:
+    branches:
+      - 'master'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.head_commit.message, '[ci build]')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+
+      - name: Build with Gradle
+        run: ./gradlew buildAndCollect
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-artifacts
+          path: 'build/libs/*/*.jar'
+          if-no-files-found: ignore
+
+  publish:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.head_commit.message, '[ci publish]')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+
+      - name: Set up Modrinth token
+        run: echo "MR_TOKEN=${{ secrets.MODRINTH_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Publish to Modrinth
+        run: ./gradlew buildAndCollect modrinth
+
+      - name: Upload publish artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: publish-artifacts
+          path: 'build/libs/*/*.jar'
+          if-no-files-found: ignore
