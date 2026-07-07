@@ -1,6 +1,10 @@
+import dev.kikugie.stonecutter.build.StonecutterBuildExtension
+import nl.javadude.gradle.plugins.license.LicenseExtension
+
 plugins {
     id("dev.kikugie.stonecutter")
-    id("dev.yumi.gradle.licenser") version "4.0.0"
+//    id("com.diffplug.spotless") version "8.8.0" apply false
+    id("cloud.rio.license") version "0.18.0" apply false
 }
 
 stonecutter active "26.2.x-fabric"
@@ -43,7 +47,15 @@ stonecutter parameters {
     }
 }
 
-license {
-    rule(file("HEADER.txt"))
-    include("src/**/*.java")
+subprojects {
+    val projectStonecutter = project.extensions.getByType<StonecutterBuildExtension>()
+    if (projectStonecutter.current.isActive) {
+        project.plugins.apply("cloud.rio.license")
+        with(project.extensions.getByType<LicenseExtension>()) {
+            encoding = "UTF-8"
+            header = rootProject.file("HEADER.txt")
+            include("**/*.java")
+            mapping("java", "SLASHSTAR_STYLE")
+        }
+    }
 }
