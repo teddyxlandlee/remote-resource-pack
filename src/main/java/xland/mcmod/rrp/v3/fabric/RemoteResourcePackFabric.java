@@ -1,11 +1,11 @@
-package xland.mcmod.remoteresourcepack.fabric;
+package xland.mcmod.rrp.v3.fabric;
 
 //? if fabric {
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.packs.repository.PackRepository;
 import org.apache.commons.io.function.IOSupplier;
-import xland.mcmod.remoteresourcepack.RRPCacheRepoSource;
-import xland.mcmod.remoteresourcepack.RemoteResourcePack;
+import xland.mcmod.rrp.v3.RRPCacheRepoSource;
+import xland.mcmod.rrp.v3.RemoteResourcePack;
 
 import java.io.BufferedReader;
 import java.nio.file.Files;

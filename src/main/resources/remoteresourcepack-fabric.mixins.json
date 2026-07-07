@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "xland.mcmod.remoteresourcepack.mixin.fabric",
+  "package": "xland.mcmod.rrp.v3.mixin.fabric",
   "compatibilityLevel": "${java}",
   "client": [
     "MixinMinecraft",

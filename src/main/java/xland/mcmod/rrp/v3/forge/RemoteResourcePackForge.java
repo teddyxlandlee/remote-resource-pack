@@ -1,11 +1,11 @@
-package xland.mcmod.remoteresourcepack.forge;
+package xland.mcmod.rrp.v3.forge;
 
 //? if forge {
 /*import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.apache.commons.io.function.IOSupplier;
-import xland.mcmod.remoteresourcepack.RemoteResourcePack;
+import xland.mcmod.rrp.v3.RemoteResourcePack;
 
 import java.io.BufferedReader;
 import java.nio.file.Files;

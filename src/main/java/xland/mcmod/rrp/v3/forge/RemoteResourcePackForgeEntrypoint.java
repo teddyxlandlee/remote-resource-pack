@@ -1,4 +1,4 @@
-package xland.mcmod.remoteresourcepack.forge;
+package xland.mcmod.rrp.v3.forge;
 
 //? if forge {
 /*import net.minecraft.server.packs.PackType;
@@ -6,8 +6,8 @@ import net.minecraftforge.event.AddPackFindersEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
-import xland.mcmod.remoteresourcepack.RRPCacheRepoSource;
-import xland.mcmod.remoteresourcepack.RemoteResourcePack;
+import xland.mcmod.rrp.v3.RRPCacheRepoSource;
+import xland.mcmod.rrp.v3.RemoteResourcePack;
 
 import java.util.concurrent.atomic.AtomicReference;
 

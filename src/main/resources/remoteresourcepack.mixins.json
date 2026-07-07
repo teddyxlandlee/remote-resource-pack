@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "xland.mcmod.remoteresourcepack.mixin",
+  "package": "xland.mcmod.rrp.v3.mixin",
   "compatibilityLevel": "${java}",
   "client": [
     "MixinOptions"

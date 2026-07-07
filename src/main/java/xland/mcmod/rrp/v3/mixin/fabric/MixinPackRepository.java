@@ -1,4 +1,4 @@
-package xland.mcmod.remoteresourcepack.mixin.fabric;
+package xland.mcmod.rrp.v3.mixin.fabric;
 
 //? if fabric {
 import net.minecraft.server.packs.repository.PackRepository;
@@ -6,7 +6,7 @@ import net.minecraft.server.packs.repository.RepositorySource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
-import xland.mcmod.remoteresourcepack.fabric.MutablePackRepository;
+import xland.mcmod.rrp.v3.fabric.MutablePackRepository;
 
 import java.util.HashSet;
 import java.util.Set;

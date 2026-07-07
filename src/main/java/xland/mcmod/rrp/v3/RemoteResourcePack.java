@@ -1,4 +1,4 @@
-package xland.mcmod.remoteresourcepack;
+package xland.mcmod.rrp.v3;
 
 import com.google.gson.*;
 import net.minecraft.client.Minecraft;
@@ -10,11 +10,11 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 //? if fabric
-import xland.mcmod.remoteresourcepack.fabric.RemoteResourcePackFabric;
+import xland.mcmod.rrp.v3.fabric.RemoteResourcePackFabric;
 //? if neoforge
-//import xland.mcmod.remoteresourcepack.neoforge.RemoteResourcePackNeo;
+//import xland.mcmod.rrp.v3.neoforge.RemoteResourcePackNeo;
 //? if forge
-//import xland.mcmod.remoteresourcepack.forge.RemoteResourcePackForge;
+//import xland.mcmod.rrp.v3.forge.RemoteResourcePackForge;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

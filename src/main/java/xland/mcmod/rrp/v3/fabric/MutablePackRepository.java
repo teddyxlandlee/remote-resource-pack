@@ -1,4 +1,4 @@
-package xland.mcmod.remoteresourcepack.fabric;
+package xland.mcmod.rrp.v3.fabric;
 
 //? if fabric {
 import net.minecraft.server.packs.repository.RepositorySource;

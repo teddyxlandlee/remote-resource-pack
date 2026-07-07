@@ -1,4 +1,4 @@
-package xland.mcmod.remoteresourcepack.neoforge;
+package xland.mcmod.rrp.v3.neoforge;
 
 //? if neoforge {
 /*import net.minecraft.server.packs.PackType;
@@ -7,8 +7,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.event.AddPackFindersEvent;
-import xland.mcmod.remoteresourcepack.RRPCacheRepoSource;
-import xland.mcmod.remoteresourcepack.RemoteResourcePack;
+import xland.mcmod.rrp.v3.RRPCacheRepoSource;
+import xland.mcmod.rrp.v3.RemoteResourcePack;
 
 @Mod(RemoteResourcePack.MOD_ID)
 public class RemoteResourcePackNeoEntrypoint {

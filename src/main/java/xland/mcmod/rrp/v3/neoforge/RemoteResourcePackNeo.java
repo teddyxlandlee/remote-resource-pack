@@ -1,10 +1,10 @@
-package xland.mcmod.remoteresourcepack.neoforge;
+package xland.mcmod.rrp.v3.neoforge;
 
 //? if neoforge {
 /*import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
 import org.apache.commons.io.function.IOSupplier;
-import xland.mcmod.remoteresourcepack.RemoteResourcePack;
+import xland.mcmod.rrp.v3.RemoteResourcePack;
 
 import java.io.BufferedReader;
 import java.nio.file.Files;

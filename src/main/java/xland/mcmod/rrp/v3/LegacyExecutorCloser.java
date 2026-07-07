@@ -1,4 +1,4 @@
-package xland.mcmod.remoteresourcepack;
+package xland.mcmod.rrp.v3;
 
 //? if java: < 21 {
 /*import org.jetbrains.annotations.NotNull;

@@ -1,4 +1,4 @@
-package xland.mcmod.remoteresourcepack;
+package xland.mcmod.rrp.v3;
 
 import com.google.gson.*;
 import net.minecraft.ChatFormatting;
