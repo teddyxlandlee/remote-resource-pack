@@ -1,3 +1,8 @@
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
+import org.apache.tools.ant.filters.BaseFilterReader
+import java.io.Reader
+import java.io.StringReader
 import java.time.Instant
 
 plugins {
@@ -42,11 +47,60 @@ minecraft {
     }
 }
 
+val is1205OrLater = sc.current.parsed >= "1.20.5"
+
 dependencies {
     val mavenizer = minecraft.dependency("net.minecraftforge:forge:${property("deps.forge")}")
     implementation(mavenizer)
     runCatching { mavenizer.toSrgFile.get() }.map { f ->
         renamer.setMappings(files(f))
+    }
+
+    if (!is1205OrLater) annotationProcessor("org.spongepowered:mixin:0.8.7:processor")
+}
+
+val mixinConfig = "${sc.properties["mod.id"] as String}.mixins.json"
+
+minecraft.runs.configureEach {
+    args("--mixin.config", mixinConfig)
+}
+
+if (!is1205OrLater) {
+    val refMapName = "${sc.properties["mod.id"] as String}.refmap.json"
+    renamer.enableMixinRefmaps {
+        config(mixinConfig)
+        source(sourceSets["main"]) {
+            refMap = refMapName
+        }
+        jar(tasks.jar)
+    }
+
+    tasks.processResources {
+        filesMatching(mixinConfig) {
+            open class RefMapAdder(reader: Reader): BaseFilterReader(reader) {
+                private lateinit var transformedContent: StringReader
+                var refMapName: String = "UNKNOWN"
+
+                private fun ensureInitialized() {
+                    if (!initialized) {
+                        val legacyContent = this.readFully().orEmpty()
+                        transformedContent = GsonBuilder().setPrettyPrinting().create().let { gson ->
+                            val obj = gson.fromJson(legacyContent, JsonObject::class.java)
+                            obj.addProperty("refmap", this.refMapName)
+
+                            StringReader(gson.toJson(obj))
+                        }
+                        initialized = true
+                    }
+                }
+
+                override fun read(): Int {
+                    ensureInitialized()
+                    return transformedContent.read()
+                }
+            }
+            filter<RefMapAdder>("refMapName" to refMapName)
+        }
     }
 }
 
@@ -91,8 +145,6 @@ tasks {
         exclude("fabric.mod.json", "META-INF/neoforge.mods.toml", "*.ct", "*.classtweaker")
     }
 
-    val is1205OrLater = sc.current.version >= "1.20.5"
-
     jar {
         manifest {
             attributes(
@@ -100,10 +152,15 @@ tasks {
                 "Specification-Vendor" to "teddyxlandlee",
                 "Specification-Version" to "1",
                 "Implementation-Title" to rootProject.name,
-                "Implementation-Version" to rootProject.version,
+                "Implementation-Version" to sc.properties["mod.version"] as String,
                 "Implementation-Vendor" to "teddyxlandlee",
                 "Implementation-Timestamp" to Instant.now(),
             )
+
+            if (is1205OrLater) {
+                // manually add mixin config
+                attributes("MixinConfigs" to mixinConfig)
+            }
         }
         if (!is1205OrLater) {
             archiveClassifier = "dev"
@@ -115,6 +172,7 @@ tasks {
     } else {
         renamer.classes(jar) {
             archiveClassifier = null as String?
+            mappings(renamer.mixin.generatedMappings)
         }.flatMap { it.output }
     }
 

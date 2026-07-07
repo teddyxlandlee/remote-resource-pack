@@ -5,10 +5,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.util.GsonHelper;
 import org.apache.commons.io.function.IOSupplier;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Marker;
-import org.apache.logging.log4j.MarkerManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 //? if fabric
 import xland.mcmod.remoteresourcepack.fabric.RemoteResourcePackFabric;
 //? if neoforge
@@ -29,8 +29,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public abstract class RemoteResourcePack {
     public static final String MOD_ID = "remoteresourcepack";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    static final Logger LOGGER = LogManager.getLogger();
-    private static final Marker MARKER = MarkerManager.getMarker("RemoteResourcePack");
+    static final Logger LOGGER = LoggerFactory.getLogger(RemoteResourcePack.class);
+    private static final Marker MARKER = MarkerFactory.getMarker("RemoteResourcePack");
 
     private static volatile Map<String, Path> cacheFiles;
 
