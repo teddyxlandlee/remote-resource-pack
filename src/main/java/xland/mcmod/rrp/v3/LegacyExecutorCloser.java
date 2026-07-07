@@ -1,9 +1,7 @@
 package xland.mcmod.rrp.v3;
 
 //? if java: < 21 {
-/*import org.jetbrains.annotations.NotNull;
-
-import java.io.Closeable;
+/*import java.io.Closeable;
 import java.net.http.HttpClient;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -48,7 +46,7 @@ record LegacyExecutorCloser(ExecutorService executor) implements Closeable, Exec
     }
 
     @Override
-    public void execute(@NotNull Runnable command) {
+    public void execute(Runnable command) {
         executor.execute(command);
     }
 }

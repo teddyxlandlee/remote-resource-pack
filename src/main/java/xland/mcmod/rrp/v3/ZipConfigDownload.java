@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import net.minecraft.client.ClientBrandRetriever;
+import org.jetbrains.annotations.UnknownNullability;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -182,23 +183,24 @@ final class ZipConfigDownload implements Closeable {
     private static void internalGenerateZip(JsonObject zipConfig, URI baseUri,
                             Map<String, String> args, Path dest)
             throws IOException, CompletionException {
-        try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(dest))) {
-            try (ZipConfigDownload zipConfigDownload = new ZipConfigDownload(zos, baseUri)) {
-                final JsonObject staticFiles = getAsJsonObject(zipConfig, "static");
-                for (Map.Entry<String, JsonElement> entry : staticFiles.entrySet()) {
-                    zipConfigDownload.addFileToZip(entry);
-                }
+        final ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(dest));
+        try (final ZipConfigDownload zipConfigDownload = new ZipConfigDownload(zos, baseUri)) {
+            final JsonObject staticFiles = getAsJsonObject(zipConfig, "static");
+            for (Map.Entry<String, JsonElement> entry : staticFiles.entrySet()) {
+                zipConfigDownload.addFileToZip(entry);
+            }
 
-                final JsonObject dynamicFiles = getAsJsonObject(zipConfig, "dynamic");
-                for (Map.Entry<String, JsonElement> dynArgEntry : dynamicFiles.entrySet()) {
-                    final JsonObject dynamicData = convertToJsonObject(dynArgEntry.getValue(), dynArgEntry.getKey());
-                    // paramValue
-                    int paramValue;
-                    String paramString = args.get(dynArgEntry.getKey());
+            final JsonObject dynamicFiles = getAsJsonObject(zipConfig, "dynamic");
+            for (Map.Entry<String, JsonElement> dynArgEntry : dynamicFiles.entrySet()) {
+                final JsonObject dynamicData = convertToJsonObject(dynArgEntry.getValue(), dynArgEntry.getKey());
+                // paramValue
+                int paramValue;
+                @UnknownNullability String paramString = args.get(dynArgEntry.getKey());
 
-                    if ("random".equals(paramString)) {
-                        paramValue = -1;
-                    } else try {
+                if ("random".equals(paramString)) {
+                    paramValue = -1;
+                } else {
+                    try {
                         paramValue = Integer.parseUnsignedInt(paramString);
                     } catch (NumberFormatException ex) {
                         final JsonElement e = dynamicData.get("default");
@@ -219,47 +221,47 @@ final class ZipConfigDownload implements Closeable {
                                     + " or it is not primitive");
                         }
                     }
+                }
 
-                    final JsonArray items = getAsJsonArray(dynamicData, "items");
-                    if (paramValue < 0) {   // is random
-                        final String errDesc = "dynamic." + dynArgEntry.getKey() + ".items";
+                final JsonArray items = getAsJsonArray(dynamicData, "items");
+                if (paramValue < 0) {   // is random
+                    final String errDesc = "dynamic." + dynArgEntry.getKey() + ".items";
 
-                        int totalWeight = 0;
-                        int index = 0;
-                        int[] weights = new int[items.size()];
+                    int totalWeight = 0;
+                    int index = 0;
+                    int[] weights = new int[items.size()];
 
-                        for (JsonElement item0 : items) {
-                            final JsonObject item = convertToJsonObject(item0, errDesc + '.' + index);
-                            int weight = getAsInt(item, "weight", 100);
-                            if (weight == 0) weight = 100;
-                            totalWeight += (weights[index++] = weight);
-                        }
+                    for (JsonElement item0 : items) {
+                        final JsonObject item = convertToJsonObject(item0, errDesc + '.' + index);
+                        int weight = getAsInt(item, "weight", 100);
+                        if (weight == 0) weight = 100;
+                        totalWeight += (weights[index++] = weight);
+                    }
 
-                        int randomNum = RANDOM.get().nextInt(totalWeight);
-                        index = 0;
-                        for (JsonElement item0 : items) {
-                            randomNum -= weights[index++];
-                            if (randomNum < 0) {
-                                final JsonObject files = getAsJsonObject(item0.getAsJsonObject(), "files");
-                                for (Map.Entry<String, JsonElement> fileEntry : files.entrySet()) {
-                                    zipConfigDownload.addFileToZip(fileEntry);
-                                }
-                                break;
-                            }
-                        }
-                    } else {
-                        if (paramValue < items.size()) {    // index in bounds
-                            final JsonObject files = getAsJsonObject(convertToJsonObject(items.get(paramValue),
-                                    "dynamic." + dynArgEntry.getKey() + ".items." + paramValue), "files");
+                    int randomNum = RANDOM.get().nextInt(totalWeight);
+                    index = 0;
+                    for (JsonElement item0 : items) {
+                        randomNum -= weights[index++];
+                        if (randomNum < 0) {
+                            final JsonObject files = getAsJsonObject(item0.getAsJsonObject(), "files");
                             for (Map.Entry<String, JsonElement> fileEntry : files.entrySet()) {
                                 zipConfigDownload.addFileToZip(fileEntry);
                             }
+                            break;
+                        }
+                    }
+                } else {
+                    if (paramValue < items.size()) {    // index in bounds
+                        final JsonObject files = getAsJsonObject(convertToJsonObject(items.get(paramValue),
+                                "dynamic." + dynArgEntry.getKey() + ".items." + paramValue), "files");
+                        for (Map.Entry<String, JsonElement> fileEntry : files.entrySet()) {
+                            zipConfigDownload.addFileToZip(fileEntry);
                         }
                     }
                 }
-
-                CompletableFuture.allOf(zipConfigDownload.futures.toArray(new CompletableFuture[0])).join();
             }
+
+            CompletableFuture.allOf(zipConfigDownload.futures.toArray(new CompletableFuture[0])).join();
         }
     }
 

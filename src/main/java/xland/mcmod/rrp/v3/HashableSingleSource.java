@@ -7,6 +7,7 @@ import net.minecraft.util.GsonHelper;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.net.URI;
@@ -18,7 +19,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletionException;
 
-public final class HashableSingleSource {
+public final class HashableSingleSource implements java.io.Serializable {
     final URI baseUri;
     final URI zipConfigUri;
     final Duration autoUpdate;
@@ -26,7 +27,7 @@ public final class HashableSingleSource {
     private static final byte schemaVersion = 1;
     private transient final String hash;
 
-    HashableSingleSource(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
+    private HashableSingleSource(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
         this.baseUri = baseUri;
         this.zipConfigUri = zipConfigUri;
         this.autoUpdate = autoUpdate;
@@ -97,9 +98,14 @@ public final class HashableSingleSource {
         return repo.resolve(getSlicedHash().append(".timestamp").toString());
     }
 
-    public static HashableSingleSource of(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
+    private static HashableSingleSource ofInternal(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
         autoUpdate = canonicalizeDuration(autoUpdate);
         return new HashableSingleSource(baseUri, zipConfigUri, autoUpdate, args);
+    }
+
+    @SuppressWarnings("unused")
+    public static HashableSingleSource of(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
+        return ofInternal(baseUri, zipConfigUri, autoUpdate, Map.copyOf(args));
     }
 
     public static HashableSingleSource readFromJson(JsonObject obj) throws JsonParseException {
@@ -129,7 +135,7 @@ public final class HashableSingleSource {
             args.put(e.getKey(), e.getValue().getAsString());
         });
 
-        return of(baseUri, zipConfigUri, autoUpdate, args);
+        return ofInternal(baseUri, zipConfigUri, autoUpdate, args);
     }
 
     private static IOException schemaMismatch(int b) {
@@ -202,7 +208,7 @@ public final class HashableSingleSource {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
 
         if (o == null || getClass() != o.getClass()) return false;
@@ -281,9 +287,8 @@ public final class HashableSingleSource {
             }
         }
 
-        return Duration.ofMillis(
-                list.stream().mapToLong(e -> Objects.requireNonNull(DURATION_UNITS.get(e.getKey()), e::getKey) * e.getValue())
-                        .sum()
-        );
+        return Duration.ofMillis(list.stream().mapToLong(
+                e -> Objects.requireNonNull(DURATION_UNITS.get(e.getKey()), e::getKey) * e.getValue()
+        ).sum());
     }
 }

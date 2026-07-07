@@ -4,6 +4,7 @@ package xland.mcmod.rrp.v3.neoforge;
 /*import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
 import org.apache.commons.io.function.IOSupplier;
+import org.jetbrains.annotations.NotNullByDefault;
 import xland.mcmod.rrp.v3.RemoteResourcePack;
 
 import java.io.BufferedReader;
@@ -11,9 +12,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
+@NotNullByDefault
 public final class RemoteResourcePackNeo extends RemoteResourcePack {
     private static final RemoteResourcePackNeo INSTANCE = new RemoteResourcePackNeo();
 

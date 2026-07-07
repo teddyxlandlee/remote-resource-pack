@@ -1,5 +1,6 @@
 plugins {
     id("dev.kikugie.stonecutter")
+    id("dev.yumi.gradle.licenser") version "4.0.0"
 }
 
 stonecutter active "26.2.x-fabric"
@@ -40,4 +41,9 @@ stonecutter parameters {
             replace("classTweaker v2 named", "classTweaker v2 official")
         }
     }
+}
+
+license {
+    rule(file("HEADER.txt"))
+    include("src/**/*.java")
 }

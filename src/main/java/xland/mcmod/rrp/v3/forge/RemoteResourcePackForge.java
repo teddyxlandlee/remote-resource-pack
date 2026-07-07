@@ -5,6 +5,7 @@ package xland.mcmod.rrp.v3.forge;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.apache.commons.io.function.IOSupplier;
+import org.jetbrains.annotations.NotNullByDefault;
 import xland.mcmod.rrp.v3.RemoteResourcePack;
 
 import java.io.BufferedReader;
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@NotNullByDefault
 public class RemoteResourcePackForge extends RemoteResourcePack {
     private static final RemoteResourcePackForge INSTANCE = new RemoteResourcePackForge();
 

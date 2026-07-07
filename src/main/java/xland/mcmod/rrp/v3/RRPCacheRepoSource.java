@@ -8,7 +8,6 @@ import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.repository.RepositorySource;
 import net.minecraft.util.GsonHelper;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -40,7 +39,7 @@ public class RRPCacheRepoSource implements RepositorySource {
     private static final Gson GSON = new Gson();
     private static final String FORCE_COMPATIBLE = "remoteresourcepack:force_compatible";
 
-    static byte[] modifyPackMcmeta(final byte @NotNull[] b) {
+    static byte[] modifyPackMcmeta(final byte[] b) {
         Objects.requireNonNull(b, "input bytes shall be non-null");
         try {
             return modifyPackMcmetaImpl(b);
@@ -84,7 +83,7 @@ public class RRPCacheRepoSource implements RepositorySource {
     }
 
     @Override
-    public void loadPacks(@NotNull Consumer<Pack> consumer) {
+    public void loadPacks(Consumer<Pack> consumer) {
         for (Map.Entry<String, Path> entry : knownCaches.entrySet()) {
             final String packId = RemoteResourcePack.packName(entry.getKey());
             final Path zipFile = entry.getValue();

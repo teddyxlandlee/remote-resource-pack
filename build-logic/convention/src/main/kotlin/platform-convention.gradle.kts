@@ -11,6 +11,7 @@ repositories {
     maven("https://maven.hixland.com") {
         name = "Teddy's Maven"
     }
+    mavenCentral()
 
     /**
      * Restricts dependency search of the given [groups] to the [maven URL][url],
@@ -22,6 +23,10 @@ repositories {
     }
     strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
+}
+
+dependencies {
+    compileOnly("org.jetbrains:annotations:26.1.0")
 }
 
 java {

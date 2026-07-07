@@ -2,9 +2,10 @@ package xland.mcmod.rrp.v3;
 
 import com.google.gson.*;
 import net.minecraft.client.Minecraft;
-import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.util.GsonHelper;
 import org.apache.commons.io.function.IOSupplier;
+import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.UnknownNullability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -19,7 +20,6 @@ import xland.mcmod.rrp.v3.fabric.RemoteResourcePackFabric;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -32,7 +32,8 @@ public abstract class RemoteResourcePack {
     static final Logger LOGGER = LoggerFactory.getLogger(RemoteResourcePack.class);
     private static final Marker MARKER = MarkerFactory.getMarker("RemoteResourcePack");
 
-    private static volatile Map<String, Path> cacheFiles;
+    // late-init
+    private static volatile @UnknownNullability Map<String, Path> cacheFiles;
 
     public static String packName(String key) {
         return "RemoteResourcePack/" + key;
@@ -71,82 +72,17 @@ public abstract class RemoteResourcePack {
 
     protected abstract Path getGameDir();
 
-    private static int getConfigVersion(JsonObject obj) {
-        JsonElement configVersionElement = obj.get("configVersion");
-        if (configVersionElement == null || !configVersionElement.isJsonPrimitive() || !configVersionElement.getAsJsonPrimitive().isNumber()) {
-            return -1;
-        } else {
-            return configVersionElement.getAsJsonPrimitive().getAsInt();
-        }
-    }
+    protected abstract Path getConfigDir();
 
-    private static void extractModConfig(Map<String, IOSupplier<BufferedReader>> source, Path dest) throws IOException {
-        final Map<String, JsonObject> toBeWritten = new LinkedHashMap<>();
-        final Map<String, Integer> configVersions = new HashMap<>();
-        {
-            final Map<String, String> path2modCache = new LinkedHashMap<>();
-            for (Map.Entry<String, IOSupplier<BufferedReader>> confFileEntry : source.entrySet()) {
-                final JsonObject conf;
-                try (BufferedReader reader = confFileEntry.getValue().get()) {
-                    conf = GsonHelper.parse(reader);
-                }
+    // <mod.jar>/RemoteResourcePack.json
+    protected abstract Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs();
 
-                for (Map.Entry<String, JsonElement> e : conf.entrySet()) {
-                    if (!e.getValue().isJsonObject())
-                        throw new JsonParseException(String.format(
-                                "Expect %s (from mod %s) to be object, got %s",
-                                e.getKey(), confFileEntry.getKey(), e.getValue()));
-                    path2modCache.merge(e.getKey(), confFileEntry.getKey(), (mod1, mod2) -> {
-                        throw new JsonParseException(String.format(
-                                "Duplicate definition of %s (from mod %s and %s)",
-                                e.getKey(), mod1, mod2));
-                    });
-                    JsonObject obj = e.getValue().getAsJsonObject();
-                    // Check version
-                    {
-                        final int configVersion = getConfigVersion(obj);
-                        configVersions.put(e.getKey(), configVersion);
-                    }
-                    toBeWritten.put(e.getKey(), obj);
-                }
-            }
-        }
-        // dump configs to modConfigDir
-        LOGGER.info(MARKER, "Dumping builtin configs");
-        for (Map.Entry<String, JsonObject> filename2json : toBeWritten.entrySet()) {
-            final Path configFile = dest.resolve(filename2json.getKey()).toAbsolutePath().normalize();
-            if (Files.exists(configFile)) {
-                // Check version
-                try (BufferedReader reader = Files.newBufferedReader(configFile)) {
-                    JsonObject obj = GSON.fromJson(reader, JsonObject.class);
-                    final int localConfigVersion = getConfigVersion(obj);
-                    final int givenConfigVersion = configVersions.getOrDefault(filename2json.getKey(), -1);
-                    if (givenConfigVersion <= localConfigVersion) {
-                        // No need to update, skip
-                        continue;
-                    }
-                } catch (Exception e) {
-                    LOGGER.warn("Can't read config at {}. Force override.", configFile);
-                }
-            }
-            // security check: file should be INSIDE modConfigDir
-            {
-                boolean isSub = false;
-                for (Path dynPath = configFile; dynPath != null; dynPath = dynPath.getParent()) {
-                    if (dynPath.equals(dest)) {
-                        isSub = true;
-                        break;
-                    }
-                }
-                if (!isSub)
-                    throw new AccessDeniedException(filename2json.getKey() + " escapes out of config dir");
-            }
+    protected abstract String modVersion();
 
-            Files.createDirectories(configFile.getParent());
-            try (BufferedWriter writer = Files.newBufferedWriter(configFile)) {
-                GSON.toJson(filename2json.getValue(), writer);
-            }
-        }
+    protected abstract String minecraftVersion();
+
+    static Path getModConfigDir() {
+        return platform().getConfigDir().resolve("RemoteResourcePack");
     }
 
     static Map<String, Path> cache(Map<String, IOSupplier<BufferedReader>> modConfigs, Path repo)
@@ -160,13 +96,51 @@ public abstract class RemoteResourcePack {
 
         // download + generate zip files
         LOGGER.info("Downloading + generating files");
+        return download(repo, modConfigDir);
+    }
 
+    private static void extractModConfig(final Map<String, IOSupplier<BufferedReader>> source, final Path dest) throws IOException {
+        final Map<String, ModJsonConfig> configs = ModJsonConfig.load(source);
+//        final Map<String, JsonObject> toBeWritten = new LinkedHashMap<>();
+//        final Map<String, Integer> configVersions = new HashMap<>();
+
+        // dump configs to modConfigDir
+        LOGGER.info(MARKER, "Dumping builtin configs");
+        for (Map.Entry<String, ModJsonConfig> config : configs.entrySet()) {
+            final String fileKey = config.getKey();
+
+            final Path configFile = dest.resolve(fileKey).toAbsolutePath().normalize();
+            if (Files.exists(configFile)) {
+                // Check version
+                try (BufferedReader reader = Files.newBufferedReader(configFile)) {
+                    final JsonObject localObj = GSON.fromJson(reader, JsonObject.class);
+                    final int localConfigVersion = ModJsonConfig.getConfigVersion(localObj);
+                    final int givenConfigVersion = config.getValue().version();
+                    if (givenConfigVersion <= localConfigVersion) {
+                        // No need to update, skip
+                        continue;
+                    }
+                } catch (Exception e) {
+                    LOGGER.warn("Can't read config at {}. Force override.", configFile);
+                }
+            }
+            // security check: file should be INSIDE modConfigDir
+            ModJsonConfig.ensurePathInConfigDir(configFile, dest, fileKey);
+
+            Files.createDirectories(configFile.getParent());
+            try (BufferedWriter writer = Files.newBufferedWriter(configFile)) {
+                GSON.toJson(config.getValue().configData(), writer);
+            }
+        }
+    }
+
+    private static ConcurrentMap<String, Path> download(Path repo, Path modConfigDir) throws IOException {
         final ConcurrentMap<String, Path> cacheFilesPerHash = new ConcurrentHashMap<>();
         //? if java: >= 21 {
         try (final var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-        //?} else {
-        /*try (final var executor = LegacyExecutorCloser.cachedThreadPool()) {
-        *///?}
+            //?} else {
+            /*try (final var executor = LegacyExecutorCloser.cachedThreadPool()) {
+             *///?}
             CopyOnWriteArrayList<CompletableFuture<?>> futures = new CopyOnWriteArrayList<>();
             AtomicInteger cc = new AtomicInteger();
 
@@ -197,39 +171,29 @@ public abstract class RemoteResourcePack {
             }
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         }
-
         return cacheFilesPerHash;
     }
 
-    static Path getModConfigDir() {
-        return platform().getConfigDir().resolve("RemoteResourcePack");
-    }
-
-    protected abstract Path getConfigDir();
-
-    // <mod.jar>/RemoteResourcePack.json
-    protected abstract Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs();
-
-    protected abstract String modVersion();
-
-    protected abstract String minecraftVersion();
-
     // invoked by Mixins
-    public static void insertEnabledPacks(PackRepository packRepository) {
-        final Set<String> set = new LinkedHashSet<>();
+    @ApiStatus.Internal
+    public static Collection<String> insertEnabledPacks(final Collection<String> oldPacks) {
+//        final Set<String> set = new LinkedHashSet<>();
         // proven that elements are unique: mapped from keySet
-        final List<String> remotePackNames = getCacheFiles().keySet().stream().map(RemoteResourcePack::packName).toList();
-        if (remotePackNames.isEmpty()) return;
+        final List<String> remotePackNames = getCacheFiles().keySet()
+                .stream()
+                .map(RemoteResourcePack::packName)
+                .toList();
+        if (remotePackNames.isEmpty()) return oldPacks;
 
-        set.addAll(packRepository.getSelectedIds());
+        final Collection<String> set = oldPacks.getClass() == LinkedHashSet.class ? oldPacks : new LinkedHashSet<>(oldPacks);
         set.addAll(remotePackNames);
-        packRepository.setSelected(set);
 
         final List<String> optionsResourcePacks = Minecraft.getInstance().options.resourcePacks;
         final Set<String> existingPackNames = new HashSet<>(optionsResourcePacks);
         remotePackNames.forEach(s -> {
-            if (!existingPackNames.contains(s))
-                optionsResourcePacks.add(s);
+            if (!existingPackNames.contains(s)) optionsResourcePacks.add(s);
         });
+
+        return set;
     }
 }
