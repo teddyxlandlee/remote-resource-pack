@@ -165,7 +165,7 @@ public abstract class RemoteResourcePack {
                         }
 
                         try {
-                            final HashableSingleSource source = HashableSingleSource.readFromJson(singleConfig);
+                            final RemotePackConfig source = RemotePackConfig.readFromJson(singleConfig);
                             cacheFilesPerHash.put(source.getHash(), source.generate(repo));
                             LOGGER.info("Generated pack {} from {}", source.getHash(), path);
                         } catch (Exception e) {

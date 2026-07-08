@@ -16,7 +16,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.StringCharacterIterator;
 import java.time.Duration;
@@ -24,15 +23,15 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletionException;
 
-public final class HashableSingleSource implements java.io.Serializable {
-    final URI baseUri;
-    final URI zipConfigUri;
-    final Duration autoUpdate;
+public final class RemotePackConfig implements java.io.Serializable {
+    private final URI baseUri;
+    private final URI zipConfigUri;
+    private final Duration autoUpdate;
     final Map<String, String> args;
     private static final byte schemaVersion = 1;
     private transient final String hash;
 
-    private HashableSingleSource(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
+    private RemotePackConfig(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
         this.baseUri = baseUri;
         this.zipConfigUri = zipConfigUri;
         this.autoUpdate = autoUpdate;
@@ -41,42 +40,24 @@ public final class HashableSingleSource implements java.io.Serializable {
         this.hash = internalCalcSha256();
     }
 
+    @Deprecated
     public boolean exists(Path repo) {
-        return Files.exists(getStoreCacheFile(repo));
+        return new PackRepoItem(repo, this).exists();
     }
 
+    @Deprecated
     public boolean isOutdated(Path repo) {
-        if (!exists(repo)) return true;
-        if (isAlwaysUpToDate(autoUpdate)) return false;
-
-        final Path timestamp = getStoreCacheTimestampFile(repo);
-        if (Files.notExists(timestamp)) return true;
-        try (DataInputStream input = new DataInputStream(Files.newInputStream(timestamp))) {
-            Instant instant = readInstant(input);
-            return instant.plus(autoUpdate).isBefore(Instant.now());
-        } catch (Exception e) {
-            RemoteResourcePack.LOGGER.error("Can't read timestamp file {}", timestamp, e);
-            return true;
-        }
+        return new PackRepoItem(repo, this).isOutdated();
     }
 
     public Path generate(Path repo) throws IOException, CompletionException {
-        final Path file = getStoreCacheFile(repo);
-        if (!isOutdated(repo)) return file;
-        Files.createDirectories(file.getParent());
-        ZipConfigDownload.generateZip(readZipConfig(), baseUri, args, file);
-
-        final Path timestamp = getStoreCacheTimestampFile(repo);
-        try (DataOutputStream output = new DataOutputStream(Files.newOutputStream(timestamp))) {
-            writeInstant(output, Instant.now());
-        }
-        return file;
+        PackRepoItem item = new PackRepoItem(repo, this);
+        item.generate();
+        return item.zipCache();
     }
 
-    private JsonObject readZipConfig() throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(zipConfigUri.toURL().openStream()))) {
-            return GsonHelper.parse(reader);
-        }
+    public boolean isAlwaysUpToDate() {
+        return isAlwaysUpToDate(this.autoUpdate);
     }
 
     private static boolean isAlwaysUpToDate(Duration duration) {
@@ -87,7 +68,7 @@ public final class HashableSingleSource implements java.io.Serializable {
         return hash;
     }
 
-    private StringBuilder getSlicedHash() {
+    StringBuilder getSlicedHash() {
         StringBuilder sb = new StringBuilder();
         sb.append(hash, 0, 2).append('/');
         sb.append(hash, 2, 32).append('/');
@@ -95,25 +76,27 @@ public final class HashableSingleSource implements java.io.Serializable {
         return sb;
     }
 
+    @Deprecated
     public Path getStoreCacheFile(Path repo) {
-        return repo.resolve(getSlicedHash().append(".zip").toString());
+        return new PackRepoItem(repo, this).zipCache();
     }
 
+    @Deprecated
     public Path getStoreCacheTimestampFile(Path repo) {
-        return repo.resolve(getSlicedHash().append(".timestamp").toString());
+        return new PackRepoItem(repo, this).zipTimestamp();
     }
 
-    private static HashableSingleSource ofInternal(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
+    private static RemotePackConfig ofInternal(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
         autoUpdate = canonicalizeDuration(autoUpdate);
-        return new HashableSingleSource(baseUri, zipConfigUri, autoUpdate, args);
+        return new RemotePackConfig(baseUri, zipConfigUri, autoUpdate, args);
     }
 
     @SuppressWarnings("unused")
-    public static HashableSingleSource of(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
+    public static RemotePackConfig of(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
         return ofInternal(baseUri, zipConfigUri, autoUpdate, Map.copyOf(args));
     }
 
-    public static HashableSingleSource readFromJson(JsonObject obj) throws JsonParseException {
+    public static RemotePackConfig readFromJson(JsonObject obj) throws JsonParseException {
         if (GsonHelper.getAsByte(obj, "schema", (byte)0) != schemaVersion)
             throw new JsonParseException(schemaMismatch(obj.get("schema").getAsByte()));
         final URI baseUri, zipConfigUri;
@@ -160,13 +143,13 @@ public final class HashableSingleSource implements java.io.Serializable {
         output.writeInt(duration.getNano());
     }
 
-    private static Instant readInstant(DataInput input) throws IOException {
+    static Instant readInstant(DataInput input) throws IOException {
         final long sec = input.readLong();
         final int nanos = input.readInt();
         return Instant.ofEpochSecond(sec, nanos);
     }
 
-    private static void writeInstant(DataOutput output, Instant instant) throws IOException {
+    static void writeInstant(DataOutput output, Instant instant) throws IOException {
         output.writeLong(instant.getEpochSecond());
         output.writeInt(instant.getNano());
     }
@@ -218,7 +201,7 @@ public final class HashableSingleSource implements java.io.Serializable {
 
         if (o == null || getClass() != o.getClass()) return false;
 
-        HashableSingleSource that = (HashableSingleSource) o;
+        RemotePackConfig that = (RemotePackConfig) o;
 
         return new EqualsBuilder()
                 .append(baseUri, that.baseUri)
@@ -295,5 +278,21 @@ public final class HashableSingleSource implements java.io.Serializable {
         return Duration.ofMillis(list.stream().mapToLong(
                 e -> Objects.requireNonNull(DURATION_UNITS.get(e.getKey()), e::getKey) * e.getValue()
         ).sum());
+    }
+
+    public URI zipConfigUri() {
+        return zipConfigUri;
+    }
+
+    public URI baseUri() {
+        return baseUri;
+    }
+
+    public Duration autoUpdate() {
+        return autoUpdate;
+    }
+
+    public Map<String, String> args() {
+        return args;
     }
 }
