@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public record PackRepoItem(Path repo, RemotePackConfig config) {
     @Contract(pure = true)
@@ -88,13 +90,13 @@ public record PackRepoItem(Path repo, RemotePackConfig config) {
     }
 
     CachedZipConfig loadZipConfig() throws IOException {
-        try (var input = new ObjectInputStream(Files.newInputStream(this.zipConfigCache()))) {
+        try (var input = new ObjectInputStream(new GZIPInputStream(Files.newInputStream(this.zipConfigCache())))) {
             return CachedZipConfig.readFrom(input);
         }
     }
 
     void dumpZipConfig(CachedZipConfig cachedZipConfig) {
-        try (var output = new ObjectOutputStream(Files.newOutputStream(this.zipConfigCache()))) {
+        try (var output = new ObjectOutputStream(new GZIPOutputStream(Files.newOutputStream(this.zipConfigCache())))) {
             cachedZipConfig.writeTo(output);
         } catch (IOException e) {
             RemoteResourcePack.LOGGER.warn("Failed to dump zip config cache", e);
