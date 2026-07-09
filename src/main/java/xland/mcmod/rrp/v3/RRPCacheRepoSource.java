@@ -126,7 +126,7 @@ public record RRPCacheRepoSource(Map<String, Path> knownCaches) implements Repos
         }
     }
 
-    private static File getZipFile(Path zipFile) {
+    static File getZipFile(Path zipFile) {
         try {
             return zipFile.toFile();
         } catch (UnsupportedOperationException e) {

@@ -7,6 +7,7 @@ package xland.mcmod.rrp.v3;
 
 import com.google.common.base.Suppliers;
 import com.google.gson.*;
+import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 import net.minecraft.client.ClientBrandRetriever;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,7 +40,13 @@ final class ZipConfigDownload implements Closeable {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final Gson GSON = new Gson();    // for zipConfig parsing
 
-    private ZipConfigDownload(ZipOutputStream zos, URI baseUri) {
+    //? if java: >=25 {
+    static final ScopedValue<ExecutorService> IO_WORKER = ScopedValue.newInstance();
+    //?} else {
+    /*static final ThreadLocal<ExecutorService> IO_WORKER = new ThreadLocal<>();
+    *///?}
+
+    private ZipConfigDownload(ZipOutputStream zos, URI baseUri, ResourceCacheProvider cacheProvider) {
         this.zos = zos;
 
         this.zipOutputWorker = Executors.newSingleThreadExecutor();
@@ -49,8 +56,9 @@ final class ZipConfigDownload implements Closeable {
                 .executor(/*? if java: >= 21 {*/Executors.newVirtualThreadPerTaskExecutor()/*?} else {*//*LegacyExecutorCloser.cachedThreadPool()*//*?}*/)
                 .build();
         this.futures = new CopyOnWriteArrayList<>();
+        this.pendingCaches = new CopyOnWriteArrayList<>();
 
-        this.fetchContext = new CachedZipConfig.FetchContextImpl(httpClient, baseUri, USER_AGENT);
+        this.fetchContext = new CachedZipConfig.FetchContextImpl(httpClient, baseUri, USER_AGENT, IO_WORKER.get(), cacheProvider);
     }
 
     @Override
@@ -70,8 +78,10 @@ final class ZipConfigDownload implements Closeable {
     private final ExecutorService zipOutputWorker;
     private final HttpClient httpClient;
     private final List<CompletableFuture<?>> futures;
+    private final List<ResourceCacheAccess.PendingCache> pendingCaches;
 
     private final transient CachedZipConfig.FetchContextImpl fetchContext;
+
 
     private static final Supplier<String> USER_AGENT = Suppliers.memoize(() ->
             "RemoteResourcePack/" + RemoteResourcePack.platform().modVersion()
@@ -88,18 +98,24 @@ final class ZipConfigDownload implements Closeable {
         final CompletableFuture<Void> putEntryFuture;
 
         if (!zipEntry.isDirectory()) {
-            CompletableFuture<byte[]> fetchBytesFuture = fileEntry.fetch(this.fetchContext);
+            CompletableFuture<CachedZipConfig.Response> fetchBytesFuture = fileEntry.fetch(this.fetchContext);
 
             if (PACK_MCMETA.equals(filename)) {
                 // Probably the pack version requires a fix
-                fetchBytesFuture = fetchBytesFuture.thenApply(RRPCacheRepoSource::modifyPackMcmeta);
+                fetchBytesFuture = fetchBytesFuture.thenCompose(ZipConfigDownload::modifyPackMcmeta);
             }
 
-            putEntryFuture = fetchBytesFuture.thenComposeAsync(bytes -> {
+            putEntryFuture = fetchBytesFuture.thenComposeAsync(response -> {
                 try {
                     zos.putNextEntry(zipEntry);
-                    zos.write(bytes);
-                    zos.closeEntry();
+                    try (var inputStream = response.inputStream()) {
+                        inputStream.transferTo(zos);
+                    } finally {
+                        zos.closeEntry();
+                    }
+                    response.etag().ifPresent(etag -> response.uri().ifPresent(uri -> this.pendingCaches.add(
+                            new ResourceCacheAccess.PendingCache(filename, uri, etag)
+                    )));
                     return CompletableFuture.completedStage(null);
                 } catch (IOException e) {
                     return CompletableFuture.failedStage(e);
@@ -123,6 +139,21 @@ final class ZipConfigDownload implements Closeable {
         files.forEach(this::addFileToZip);
     }
 
+    private static CompletionStage<CachedZipConfig.Response> modifyPackMcmeta(CachedZipConfig.Response originalResponse) {
+        final byte[] bytes;
+        try (final InputStream inputStream = originalResponse.inputStream()) {
+            bytes = inputStream.readAllBytes();
+        } catch (IOException e) {
+            return CompletableFuture.failedStage(e);
+        }
+        byte[] modified = RRPCacheRepoSource.modifyPackMcmeta(bytes);
+        return CompletableFuture.completedStage(new CachedZipConfig.ResponseImpl(
+                new FastByteArrayInputStream(modified),
+                originalResponse.etag(),
+                originalResponse.uri()
+        ));
+    }
+
     private void joinFutures() throws CompletionException {
         joinAllFutures(this.futures);
     }
@@ -131,28 +162,28 @@ final class ZipConfigDownload implements Closeable {
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
-    static void generateZip(PackRepoItem item)
+    static void generateZip(PackRepoItem item, ResourceCacheAccess cacheManager)
             throws IOException, CompletionException {
         final RandomGenerator rng = new Random();
         //? if java: >= 25 {
         ScopedValue.where(RANDOM, rng).call(() -> {
-            internalGenerateZip(item);
+            internalGenerateZip(item, cacheManager);
             return null;
         });
         //?} else {
         /*try {
             RANDOM.set(rng);
-            internalGenerateZip(item);
+            internalGenerateZip(item, cacheManager);
         } finally {
             RANDOM.remove();    // gc
         }
         *///?}
     }
 
-    private static void internalGenerateZip(PackRepoItem item)
+    private static void internalGenerateZip(PackRepoItem item, ResourceCacheAccess cacheManager)
             throws IOException, CompletionException {
         final ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(item.zipCache()));
-        try (final ZipConfigDownload engine = new ZipConfigDownload(zos, item.config().baseUri())) {
+        try (final ZipConfigDownload engine = new ZipConfigDownload(zos, item.config().baseUri(), cacheManager)) {
             final CachedZipConfig zipConfig = engine.getZipConfig(item);
             final Map<String, String> args = item.config().args();
 
@@ -174,6 +205,7 @@ final class ZipConfigDownload implements Closeable {
                 dynamicArg.select(paramInt, RANDOM.get(), engine::addFilesToZip);
             });
             engine.joinFutures();
+            cacheManager.pushPending(item.zipCache(), engine.getPendingCaches());
         }
     }
 
@@ -195,12 +227,14 @@ final class ZipConfigDownload implements Closeable {
 
         if (response.statusCode() == 304) {     // Not Modified
             RemoteResourcePack.LOGGER.debug("Etag matches. Loading serial cache.");
-            response.body().close();
+            cleanupResponse(response);
             return item.loadZipConfig();
         } else if (isStatusOk(response.statusCode())) {
             RemoteResourcePack.LOGGER.debug("Cache miss. Rebuilding cache.");
             // cache etag
-            response.headers().firstValue("Etag").ifPresent(item::dumpZipConfigETag);
+            response.headers().firstValue("etag")
+                    .filter(ZipConfigDownload::isNotWeakEtag)
+                    .ifPresent(item::dumpZipConfigETag);
 
             // load body
             final JsonObject data;
@@ -213,9 +247,24 @@ final class ZipConfigDownload implements Closeable {
             item.dumpZipConfig(config);
             return config;
         } else {
-            response.body().close();
+            cleanupResponse(response);
             throw new IOException("Resource " + uri + " responds " + response.statusCode());
         }
     }
 
+    static boolean isNotWeakEtag(String s) {
+        return !s.startsWith("W/") && !s.startsWith("w/");
+    }
+
+    static void cleanupResponse(HttpResponse<InputStream> response) {
+        try {
+            response.body().close();
+        } catch (IOException e) {
+            RemoteResourcePack.LOGGER.warn("Failed to close response for {}", response.uri(), e);
+        }
+    }
+
+    List<ResourceCacheAccess.PendingCache> getPendingCaches() {
+        return pendingCaches;
+    }
 }

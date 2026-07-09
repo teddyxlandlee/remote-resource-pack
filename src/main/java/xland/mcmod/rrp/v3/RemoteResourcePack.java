@@ -5,6 +5,7 @@
  */
 package xland.mcmod.rrp.v3;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.*;
 import net.minecraft.client.Minecraft;
 import org.apache.commons.io.function.IOSupplier;
@@ -101,7 +102,36 @@ public abstract class RemoteResourcePack {
 
         // download + generate zip files
         LOGGER.info("Downloading + generating files");
-        return download(repo, modConfigDir);
+        final ExecutorService executorService = new ThreadPoolExecutor(
+                2, 4, 60, TimeUnit.SECONDS,
+                new ArrayBlockingQueue<>(100),
+                new ThreadFactoryBuilder()
+                        .setNameFormat("RRP-IO-Worker-%d")
+                        .setDaemon(true)
+                        .build()
+        );
+        final var cacheManager = new ResourceCacheManager(PackRepoItem.fileCacheRepo(repo));
+        final Map<String, Path> ret;
+        boolean completed = false;
+        try {
+            //? if java: >= 25 {
+            ret = ScopedValue.where(ZipConfigDownload.IO_WORKER, executorService).call(() -> download(repo, modConfigDir, cacheManager));
+            //?} else {
+            /*try {
+                ZipConfigDownload.IO_WORKER.set(executorService);
+                ret = download(repo, modConfigDir, cacheManager);
+            } finally {
+                ZipConfigDownload.IO_WORKER.remove();
+            }
+            *///?}
+            completed = true;
+        } finally {
+            if (!completed) {
+                executorService.shutdownNow();
+            }
+        }
+        cacheManager.writeCachesAsync(executorService).thenRun(executorService::shutdown);
+        return ret;
     }
 
     private static void extractModConfig(final Map<String, IOSupplier<BufferedReader>> source, final Path dest) throws IOException {
@@ -139,7 +169,7 @@ public abstract class RemoteResourcePack {
         }
     }
 
-    private static ConcurrentMap<String, Path> download(Path repo, Path modConfigDir) throws IOException {
+    private static ConcurrentMap<String, Path> download(Path repo, Path modConfigDir, ResourceCacheManager cacheManager) throws IOException {
         final ConcurrentMap<String, Path> cacheFilesPerHash = new ConcurrentHashMap<>();
         //? if java: >= 21 {
         try (final var executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -166,7 +196,7 @@ public abstract class RemoteResourcePack {
 
                         try {
                             final RemotePackConfig source = RemotePackConfig.readFromJson(singleConfig);
-                            cacheFilesPerHash.put(source.getHash(), source.generate(repo));
+                            cacheFilesPerHash.put(source.getHash(), source.generate(repo, cacheManager));
                             LOGGER.info("Generated pack {} from {}", source.getHash(), path);
                         } catch (Exception e) {
                             LOGGER.error("Failed to parse config or generate pack from {}", path, e);

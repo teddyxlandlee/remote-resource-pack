@@ -60,11 +60,11 @@ record PackRepoItem(Path repo, RemotePackConfig config) {
         }
     }
 
-    public void generate() throws IOException, CompletionException {
+    public void generate(ResourceCacheAccess cacheManager) throws IOException, CompletionException {
         if (!isOutdated()) return;
         final Path zipCache = zipCache();
         Files.createDirectories(zipCache.getParent());
-        ZipConfigDownload.generateZip(this);
+        ZipConfigDownload.generateZip(this, cacheManager);
 
         dumpTimestamp();
     }
@@ -108,5 +108,10 @@ record PackRepoItem(Path repo, RemotePackConfig config) {
         try (var output = new DataOutputStream(Files.newOutputStream(timestamp))) {
             RemotePackConfig.writeInstant(output, Instant.now());
         }
+    }
+
+    @Contract(pure = true)
+    static Path fileCacheRepo(Path rootRepo) {
+        return rootRepo.resolve("file-cache");
     }
 }

@@ -41,9 +41,9 @@ public final class RemotePackConfig implements java.io.Serializable {
         this.hash = internalCalcSha256();
     }
 
-    public Path generate(Path repo) throws IOException, CompletionException {
+    public Path generate(Path repo, ResourceCacheAccess cacheManager) throws IOException, CompletionException {
         PackRepoItem item = new PackRepoItem(repo, this);
-        item.generate();
+        item.generate(cacheManager);
         return item.zipCache();
     }
 
@@ -60,6 +60,10 @@ public final class RemotePackConfig implements java.io.Serializable {
     }
 
     StringBuilder getSlicedHash() {
+        return slicedSha256(this.hash);
+    }
+
+    static StringBuilder slicedSha256(String hash) {
         StringBuilder sb = new StringBuilder();
         sb.append(hash, 0, 2).append('/');
         sb.append(hash, 2, 32).append('/');

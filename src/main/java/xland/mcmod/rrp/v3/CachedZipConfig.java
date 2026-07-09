@@ -8,6 +8,7 @@ package xland.mcmod.rrp.v3;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,6 +20,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -169,7 +171,7 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
     }
 
     public sealed interface FileEntry extends Serializable {
-        CompletableFuture<byte[]> fetch(FetchContext context);
+        CompletableFuture<Response> fetch(FetchContext context);
 
         static FileEntry raw(String utf8) {
             return new LocalFileEntry(utf8.getBytes(StandardCharsets.UTF_8));
@@ -210,8 +212,8 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
         }
 
         @Override
-        public CompletableFuture<byte[]> fetch(FetchContext context) {
-            return CompletableFuture.completedFuture(this.bytes());
+        public CompletableFuture<Response> fetch(FetchContext context) {
+            return CompletableFuture.completedFuture(Response.ofBytes(this.bytes()));
         }
 
         private static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
@@ -219,18 +221,42 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
 
     private record RemoteFileEntry(URI uri) implements FileEntry {
         @Override
-        public CompletableFuture<byte[]> fetch(FetchContext context) {
-            // TODO: component cache based on etag
+        public CompletableFuture<Response> fetch(FetchContext context) {
+            return this.fetchImpl(context, false);
+        }
+
+        private CompletableFuture<Response> fetchImpl(FetchContext context, boolean ignoreEtag) {
+            final URI uri = context.baseUri().resolve(this.uri);
+            final @Nullable String etag = ignoreEtag ? null : context.cacheProvider().getEtags().get(uri.toASCIIString());
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(uri).GET().header("User-Agent", context.userAgent());
+            if (etag != null) {
+                requestBuilder.header("If-None-Match", etag);
+            }
+
             //noinspection resource
-            return context.httpClient().sendAsync(
-                    HttpRequest.newBuilder(context.baseUri().resolve(uri)).GET().header("User-Agent", context.userAgent()).build(),
-                    HttpResponse.BodyHandlers.ofByteArray()
-            ).thenCompose(httpResponse -> {
-                if (ZipConfigDownload.isStatusOk(httpResponse.statusCode()))
-                    return CompletableFuture.completedStage(httpResponse.body());
-                return CompletableFuture.failedStage(new IOException(
-                        "Response " + uri + " responds " + httpResponse.statusCode()
-                ));
+            return context.httpClient().sendAsync(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream()).thenCompose(httpResponse -> {
+                if (httpResponse.statusCode() == 304) {
+                    ZipConfigDownload.cleanupResponse(httpResponse);
+                    if (etag == null) {
+                        return CompletableFuture.failedStage(new IOException(uri + " returned 304 without etag provided"));
+                    }
+                    // try getting cache from ioWorker
+                    return CompletableFuture.completedFuture(context.cacheProvider()).thenComposeAsync(cacheProvider -> {
+                        try {
+                            var inputStream = cacheProvider.readCache(uri, etag);
+                            // Do not use ResponseImpl.ofSuccessResponse(): etag not updated
+                            return CompletableFuture.completedStage(Response.ofCacheStream(inputStream, uri));
+                        } catch (IOException e) {
+                            RemoteResourcePack.LOGGER.warn("Failed to use cache. Re-download {}.", uri, e);
+                            return this.fetchImpl(context, true);
+                        }
+                    }, context.cacheIOWorker());
+                } else if (ZipConfigDownload.isStatusOk(httpResponse.statusCode())) {
+                    final Response response = ResponseImpl.ofSuccessResponse(httpResponse, uri);
+                    return CompletableFuture.completedStage(response);
+                } else {
+                    return CompletableFuture.failedStage(new IOException("Response " + uri + " responds " + httpResponse.statusCode()));
+                }
             });
         }
     }
@@ -240,12 +266,42 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
         HttpClient httpClient();
         URI baseUri();
         String userAgent();
+        Executor cacheIOWorker();
+
+        ResourceCacheProvider cacheProvider();
     }
 
-    record FetchContextImpl(HttpClient httpClient, URI baseUri, Supplier<String> userAgentSupplier) implements FetchContext {
+    record FetchContextImpl(HttpClient httpClient, URI baseUri, Supplier<String> userAgentSupplier,
+                            Executor cacheIOWorker, ResourceCacheProvider cacheProvider) implements FetchContext {
         @Override
         public String userAgent() {
             return this.userAgentSupplier().get();
+        }
+    }
+
+    public interface Response {
+        InputStream inputStream();
+        Optional<String> etag();
+        Optional<String> uri();
+
+        static Response ofBytes(byte[] bytes) {
+            // Use FastUtil stream to avoid unnecessary synchronization
+            return new ResponseImpl(new FastByteArrayInputStream(bytes), Optional.empty(), Optional.empty());
+        }
+
+        static Response ofCacheStream(InputStream inputStream, URI uri) {
+            return new ResponseImpl(inputStream, Optional.empty(), Optional.of(uri.toASCIIString()));
+        }
+    }
+
+    record ResponseImpl(InputStream inputStream, Optional<String> etag, Optional<String> uri) implements Response {
+        // Caller must check statusCode in advance
+        static ResponseImpl ofSuccessResponse(HttpResponse<InputStream> httpResponse, URI uri) {
+            return new ResponseImpl(
+                    httpResponse.body(),
+                    httpResponse.headers().firstValue("etag").filter(ZipConfigDownload::isNotWeakEtag),
+                    Optional.of(uri.toASCIIString())
+            );
         }
     }
 }
