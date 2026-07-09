@@ -8,6 +8,7 @@ package xland.mcmod.rrp.v3;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
@@ -168,7 +169,7 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
     }
 
     public sealed interface FileEntry extends Serializable {
-        CompletableFuture<byte[]> fetch(HttpClient httpClient, URI baseUri, Supplier<String> userAgent);
+        CompletableFuture<byte[]> fetch(FetchContext context);
 
         static FileEntry raw(String utf8) {
             return new LocalFileEntry(utf8.getBytes(StandardCharsets.UTF_8));
@@ -209,7 +210,7 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
         }
 
         @Override
-        public CompletableFuture<byte[]> fetch(HttpClient httpClient, URI baseUri, Supplier<String> userAgent) {
+        public CompletableFuture<byte[]> fetch(FetchContext context) {
             return CompletableFuture.completedFuture(this.bytes());
         }
 
@@ -218,10 +219,11 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
 
     private record RemoteFileEntry(URI uri) implements FileEntry {
         @Override
-        public CompletableFuture<byte[]> fetch(HttpClient httpClient, URI baseUri, Supplier<String> userAgent) {
+        public CompletableFuture<byte[]> fetch(FetchContext context) {
             // TODO: component cache based on etag
-            return httpClient.sendAsync(
-                    HttpRequest.newBuilder(baseUri.resolve(uri)).GET().header("User-Agent", userAgent.get()).build(),
+            //noinspection resource
+            return context.httpClient().sendAsync(
+                    HttpRequest.newBuilder(context.baseUri().resolve(uri)).GET().header("User-Agent", context.userAgent()).build(),
                     HttpResponse.BodyHandlers.ofByteArray()
             ).thenCompose(httpResponse -> {
                 if (ZipConfigDownload.isStatusOk(httpResponse.statusCode()))
@@ -230,6 +232,20 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
                         "Response " + uri + " responds " + httpResponse.statusCode()
                 ));
             });
+        }
+    }
+
+    @ApiStatus.Experimental
+    public interface FetchContext {
+        HttpClient httpClient();
+        URI baseUri();
+        String userAgent();
+    }
+
+    record FetchContextImpl(HttpClient httpClient, URI baseUri, Supplier<String> userAgentSupplier) implements FetchContext {
+        @Override
+        public String userAgent() {
+            return this.userAgentSupplier().get();
         }
     }
 }

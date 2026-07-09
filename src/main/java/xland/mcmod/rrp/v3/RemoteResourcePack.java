@@ -7,7 +7,6 @@ package xland.mcmod.rrp.v3;
 
 import com.google.gson.*;
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.GsonHelper;
 import org.apache.commons.io.function.IOSupplier;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.UnknownNullability;
@@ -33,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class RemoteResourcePack {
     public static final String MOD_ID = "remoteresourcepack";
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     static final Logger LOGGER = LoggerFactory.getLogger(RemoteResourcePack.class);
     private static final Marker MARKER = MarkerFactory.getMarker("RemoteResourcePack");
 
@@ -68,6 +67,7 @@ public abstract class RemoteResourcePack {
         }
     }
 
+    @ApiStatus.Obsolete
     public static Map<String, Path> getCacheFiles() {
         final Map<String, Path> map = cacheFiles;
         if (map == null)
@@ -158,8 +158,8 @@ public abstract class RemoteResourcePack {
 
                         final JsonObject singleConfig;
                         try (BufferedReader reader = Files.newBufferedReader(path)) {
-                            singleConfig = GsonHelper.parse(reader);
-                        } catch (IOException e) {
+                            singleConfig = GSON.fromJson(reader, JsonObject.class);
+                        } catch (IOException | JsonParseException e) {
                             LOGGER.error("Failed to parse config from {}", path);
                             return;
                         }
@@ -174,7 +174,7 @@ public abstract class RemoteResourcePack {
                     }, executor));
                 });
             }
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            ZipConfigDownload.joinAllFutures(futures);
         }
         return cacheFilesPerHash;
     }

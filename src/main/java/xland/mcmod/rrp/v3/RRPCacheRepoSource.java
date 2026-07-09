@@ -12,7 +12,7 @@ import net.minecraft.server.packs.*;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.repository.RepositorySource;
-import net.minecraft.util.GsonHelper;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -20,8 +20,7 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.function.Consumer;
 
-@SuppressWarnings("ClassCanBeRecord")
-public class RRPCacheRepoSource implements RepositorySource {
+public record RRPCacheRepoSource(Map<String, Path> knownCaches) implements RepositorySource {
     // Description: `%s (Remote cache)`
     private static final PackSource PACK_SOURCE = PackSource.create(
             packName -> Component.translatable("pack.nameAndSource",
@@ -31,10 +30,8 @@ public class RRPCacheRepoSource implements RepositorySource {
             /*loadedOnStart=*/true
     );
 
-    private final Map<String, Path> knownCaches;
-
-    public RRPCacheRepoSource(Map<String, Path> knownCaches) {
-        this.knownCaches = Collections.unmodifiableMap(knownCaches);
+    public RRPCacheRepoSource {
+        knownCaches = Collections.unmodifiableMap(knownCaches);
     }
 
     public static RRPCacheRepoSource ofCached() {
@@ -57,11 +54,15 @@ public class RRPCacheRepoSource implements RepositorySource {
     private static byte[] modifyPackMcmetaImpl(final byte[] b) throws RuntimeException {
         String s = new String(b, StandardCharsets.UTF_8);
         JsonObject rootObj = GSON.fromJson(s, JsonObject.class);
-        if (!GsonHelper.getAsBoolean(rootObj, FORCE_COMPATIBLE, false)) {
+        if (!(rootObj.get(FORCE_COMPATIBLE) instanceof JsonPrimitive primitive) || !primitive.getAsBoolean()) {
             // no need to modify
             return b;
         }
-        JsonObject packObj = GsonHelper.getAsJsonObject(rootObj, "pack");
+
+        @Nullable JsonElement element = rootObj.get("pack");
+        if (!(element instanceof JsonObject packObj)) {
+            throw new JsonParseException("Malformed pack.mcmeta: missing 'pack' object");
+        }
 
         //? if >= 1.21.9 {
         packObj.addProperty("min_format", 65);  // the version that defines min/max_format
@@ -89,10 +90,10 @@ public class RRPCacheRepoSource implements RepositorySource {
 
     @Override
     public void loadPacks(Consumer<Pack> consumer) {
-        for (Map.Entry<String, Path> entry : knownCaches.entrySet()) {
+        for (Map.Entry<String, Path> entry : this.knownCaches().entrySet()) {
             final String packId = RemoteResourcePack.packName(entry.getKey());
             final Path zipFile = entry.getValue();
-            // Now we don't support pack.mcmeta force-modification
+            // pack.mcmeta force-modification was done by ZipConfigDownload
             final Component packDescription = Component.translatable("pack.source.mod.remoteresourcepack")
                     .append(" #")
                     .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27)));

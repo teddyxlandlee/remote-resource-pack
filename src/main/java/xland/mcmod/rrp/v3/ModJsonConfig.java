@@ -8,7 +8,6 @@ package xland.mcmod.rrp.v3;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import net.minecraft.util.GsonHelper;
 import org.apache.commons.io.function.IOSupplier;
 
 import java.io.BufferedReader;
@@ -36,7 +35,9 @@ record ModJsonConfig(JsonObject configData, int version) {
             final String modId = confFileEntry.getKey();
             final JsonObject conf;
             try (BufferedReader reader = confFileEntry.getValue().get()) {
-                conf = GsonHelper.parse(reader);
+                conf = RemoteResourcePack.GSON.fromJson(reader, JsonObject.class);
+            } catch (JsonParseException e) {
+                throw new IOException("JSON parse failure for " + modId);
             }
 
             for (Map.Entry<String, JsonElement> e : conf.entrySet()) {

@@ -6,9 +6,10 @@
 package xland.mcmod.rrp.v3;
 
 import com.google.common.hash.Hashing;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import net.minecraft.util.GsonHelper;
+import com.google.gson.JsonPrimitive;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -40,16 +41,6 @@ public final class RemotePackConfig implements java.io.Serializable {
         this.hash = internalCalcSha256();
     }
 
-    @Deprecated
-    public boolean exists(Path repo) {
-        return new PackRepoItem(repo, this).exists();
-    }
-
-    @Deprecated
-    public boolean isOutdated(Path repo) {
-        return new PackRepoItem(repo, this).isOutdated();
-    }
-
     public Path generate(Path repo) throws IOException, CompletionException {
         PackRepoItem item = new PackRepoItem(repo, this);
         item.generate();
@@ -76,16 +67,6 @@ public final class RemotePackConfig implements java.io.Serializable {
         return sb;
     }
 
-    @Deprecated
-    public Path getStoreCacheFile(Path repo) {
-        return new PackRepoItem(repo, this).zipCache();
-    }
-
-    @Deprecated
-    public Path getStoreCacheTimestampFile(Path repo) {
-        return new PackRepoItem(repo, this).zipTimestamp();
-    }
-
     private static RemotePackConfig ofInternal(URI baseUri, URI zipConfigUri, Duration autoUpdate, Map<String, String> args) {
         autoUpdate = canonicalizeDuration(autoUpdate);
         return new RemotePackConfig(baseUri, zipConfigUri, autoUpdate, args);
@@ -97,24 +78,48 @@ public final class RemotePackConfig implements java.io.Serializable {
     }
 
     public static RemotePackConfig readFromJson(JsonObject obj) throws JsonParseException {
-        if (GsonHelper.getAsByte(obj, "schema", (byte)0) != schemaVersion)
-            throw new JsonParseException(schemaMismatch(obj.get("schema").getAsByte()));
+        if (!(obj.get("schema") instanceof JsonPrimitive primitive) || !primitive.isNumber() || primitive.getAsLong() != schemaVersion) {
+            // Includes the condition where 'schema' is absent
+            throw new JsonParseException(schemaMismatch(obj.get("schema")));
+        }
+
         final URI baseUri, zipConfigUri;
         try {
-            baseUri = URI.create(GsonHelper.getAsString(obj, "base"));
-            zipConfigUri = URI.create(GsonHelper.getAsString(obj, "zipconfig"));
+            @Nullable JsonElement baseUriElement = obj.get("base"), zipConfigElement = obj.get("zipconfig");
+            if (!(baseUriElement instanceof JsonPrimitive p1) || !(zipConfigElement instanceof JsonPrimitive p2) || !p1.isString() || !p2.isString()) {
+                throw new JsonParseException("'base' and 'zipconfig' must be string");
+            }
+            baseUri = URI.create(baseUriElement.getAsString());
+            zipConfigUri = URI.create(zipConfigElement.getAsString());
         } catch (IllegalArgumentException e) {
             throw new JsonParseException("Unresolvable URI", e);
         }
-        final String autoUpdateExpr = GsonHelper.getAsString(obj, "autoUpdate", "2d");
+        @Nullable JsonElement autoUpdateElement = obj.get("autoUpdate");
+        final String autoUpdateExpr;
+        if (autoUpdateElement == null) {
+            autoUpdateExpr = "2d";
+        } else if (!(autoUpdateElement.isJsonPrimitive())) {
+            throw new JsonParseException("'autoUpdate' must be string");
+        } else {
+            autoUpdateExpr = autoUpdateElement.getAsString();
+        }
         Duration autoUpdate = switch (autoUpdateExpr) {
             case "always", "0" -> Duration.ZERO;
             case "never", "-1" -> Duration.ofSeconds(-1);
             default -> durationFromString(autoUpdateExpr);
         };
-        obj = GsonHelper.getAsJsonObject(obj, "args", new JsonObject());
+        @Nullable JsonElement argsElement = obj.get("args");
+        final JsonObject argsObj;
+        if (argsElement == null) {
+            argsObj = new JsonObject();
+        } else if (argsElement.isJsonObject()) {
+            argsObj = argsElement.getAsJsonObject();
+        } else {
+            throw new JsonParseException("'args' must be an object");
+        }
+
         final Map<String, String> args = new LinkedHashMap<>();
-        obj.entrySet().forEach(e -> {
+        argsObj.entrySet().forEach(e -> {
             if (!e.getValue().isJsonPrimitive()) {
                 throw new JsonParseException(String.format(
                         "Expect argument %s to be primitive, got %s",
@@ -126,9 +131,9 @@ public final class RemotePackConfig implements java.io.Serializable {
         return ofInternal(baseUri, zipConfigUri, autoUpdate, args);
     }
 
-    private static IOException schemaMismatch(int b) {
+    private static IOException schemaMismatch(@Nullable Object b) {
         return new java.io.InvalidObjectException(String.format(
-                "Invalid schema version: expected %d, got %d",
+                "Invalid schema version: expected %d, got %s",
                 schemaVersion, b
         ));
     }

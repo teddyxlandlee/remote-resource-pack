@@ -17,6 +17,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -40,7 +41,6 @@ final class ZipConfigDownload implements Closeable {
 
     private ZipConfigDownload(ZipOutputStream zos, URI baseUri) {
         this.zos = zos;
-        this.baseUri = baseUri;
 
         this.zipOutputWorker = Executors.newSingleThreadExecutor();
         this.httpClient = HttpClient.newBuilder()
@@ -49,6 +49,8 @@ final class ZipConfigDownload implements Closeable {
                 .executor(/*? if java: >= 21 {*/Executors.newVirtualThreadPerTaskExecutor()/*?} else {*//*LegacyExecutorCloser.cachedThreadPool()*//*?}*/)
                 .build();
         this.futures = new CopyOnWriteArrayList<>();
+
+        this.fetchContext = new CachedZipConfig.FetchContextImpl(httpClient, baseUri, USER_AGENT);
     }
 
     @Override
@@ -67,8 +69,9 @@ final class ZipConfigDownload implements Closeable {
     private final ZipOutputStream zos;
     private final ExecutorService zipOutputWorker;
     private final HttpClient httpClient;
-    private final URI baseUri;
     private final List<CompletableFuture<?>> futures;
+
+    private final transient CachedZipConfig.FetchContextImpl fetchContext;
 
     private static final Supplier<String> USER_AGENT = Suppliers.memoize(() ->
             "RemoteResourcePack/" + RemoteResourcePack.platform().modVersion()
@@ -85,7 +88,7 @@ final class ZipConfigDownload implements Closeable {
         final CompletableFuture<Void> putEntryFuture;
 
         if (!zipEntry.isDirectory()) {
-            CompletableFuture<byte[]> fetchBytesFuture = fileEntry.fetch(this.httpClient, this.baseUri, USER_AGENT);
+            CompletableFuture<byte[]> fetchBytesFuture = fileEntry.fetch(this.fetchContext);
 
             if (PACK_MCMETA.equals(filename)) {
                 // Probably the pack version requires a fix
@@ -121,7 +124,11 @@ final class ZipConfigDownload implements Closeable {
     }
 
     private void joinFutures() throws CompletionException {
-        CompletableFuture.allOf(this.futures.toArray(new CompletableFuture[0])).join();
+        joinAllFutures(this.futures);
+    }
+
+    static void joinAllFutures(Collection<? extends CompletableFuture<?>> futures) throws CompletionException {
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
     static void generateZip(PackRepoItem item)

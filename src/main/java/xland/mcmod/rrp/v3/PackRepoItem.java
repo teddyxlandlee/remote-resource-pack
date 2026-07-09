@@ -16,7 +16,7 @@ import java.util.concurrent.CompletionException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-public record PackRepoItem(Path repo, RemotePackConfig config) {
+record PackRepoItem(Path repo, RemotePackConfig config) {
     @Contract(pure = true)
     public Path zipCache() {
         return this.pathWithSuffix(".zip");
