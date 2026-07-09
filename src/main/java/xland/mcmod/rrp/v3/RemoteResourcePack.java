@@ -114,23 +114,22 @@ public abstract class RemoteResourcePack {
         final Map<String, Path> ret;
         boolean completed = false;
         try {
-            //? if java: >= 25 {
-            ret = ScopedValue.where(ZipConfigDownload.IO_WORKER, executorService).call(() -> download(repo, modConfigDir, cacheManager));
-            //?} else {
-            /*try {
+            try {
                 ZipConfigDownload.IO_WORKER.set(executorService);
                 ret = download(repo, modConfigDir, cacheManager);
             } finally {
-                ZipConfigDownload.IO_WORKER.remove();
+                ZipConfigDownload.IO_WORKER.set(null);
             }
-            *///?}
             completed = true;
         } finally {
             if (!completed) {
                 executorService.shutdownNow();
             }
         }
-        cacheManager.writeCachesAsync(executorService).thenRun(executorService::shutdown);
+        cacheManager.writeCachesAsync(executorService).thenRun(() -> {
+            executorService.shutdown();
+            LOGGER.info(MARKER, "All caches dumped");
+        });
         return ret;
     }
 
@@ -176,7 +175,7 @@ public abstract class RemoteResourcePack {
             //?} else {
             /*try (final var executor = LegacyExecutorCloser.cachedThreadPool()) {
              *///?}
-            CopyOnWriteArrayList<CompletableFuture<?>> futures = new CopyOnWriteArrayList<>();
+            var futures = new CopyOnWriteArrayList<CompletableFuture<?>>();
             AtomicInteger cc = new AtomicInteger();
 
             try (var stream = Files.walk(modConfigDir)) {

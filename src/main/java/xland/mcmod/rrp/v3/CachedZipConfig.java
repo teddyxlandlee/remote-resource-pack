@@ -241,9 +241,9 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
                         return CompletableFuture.failedStage(new IOException(uri + " returned 304 without etag provided"));
                     }
                     // try getting cache from ioWorker
-                    return CompletableFuture.completedFuture(context.cacheProvider()).thenComposeAsync(cacheProvider -> {
+                    return CompletableFuture.completedFuture(null).thenComposeAsync(ignore -> {
                         try {
-                            var inputStream = cacheProvider.readCache(uri, etag);
+                            var inputStream = context.cacheProvider().readCache(uri, etag);
                             // Do not use ResponseImpl.ofSuccessResponse(): etag not updated
                             return CompletableFuture.completedStage(Response.ofCacheStream(inputStream, uri));
                         } catch (IOException e) {

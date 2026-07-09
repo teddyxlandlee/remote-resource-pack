@@ -10,6 +10,7 @@ import com.google.gson.*;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 import net.minecraft.client.ClientBrandRetriever;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnknownNullability;
 
 import java.io.*;
 import java.net.URI;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.random.RandomGenerator;
 import java.util.zip.ZipEntry;
@@ -40,11 +42,7 @@ final class ZipConfigDownload implements Closeable {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final Gson GSON = new Gson();    // for zipConfig parsing
 
-    //? if java: >=25 {
-    static final ScopedValue<ExecutorService> IO_WORKER = ScopedValue.newInstance();
-    //?} else {
-    /*static final ThreadLocal<ExecutorService> IO_WORKER = new ThreadLocal<>();
-    *///?}
+    static final AtomicReference<@UnknownNullability ExecutorService> IO_WORKER = new AtomicReference<>();
 
     private ZipConfigDownload(ZipOutputStream zos, URI baseUri, ResourceCacheProvider cacheProvider) {
         this.zos = zos;
