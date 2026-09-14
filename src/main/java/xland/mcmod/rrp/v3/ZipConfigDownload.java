@@ -8,7 +8,6 @@ package xland.mcmod.rrp.v3;
 import com.google.common.base.Suppliers;
 import com.google.gson.*;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
-import net.minecraft.client.ClientBrandRetriever;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
@@ -84,7 +83,7 @@ final class ZipConfigDownload implements Closeable {
     private static final Supplier<String> USER_AGENT = Suppliers.memoize(() ->
             "RemoteResourcePack/" + RemoteResourcePack.platform().modVersion()
                     + " MC/" + RemoteResourcePack.platform().minecraftVersion()
-                    + " (Platform:" + ClientBrandRetriever.getClientModName() + ")"
+                    + " (Platform:" + RRPCacheRepoSource.getClientBrandName() + ")"
     );
 
     static boolean isStatusOk(int statusCode) {

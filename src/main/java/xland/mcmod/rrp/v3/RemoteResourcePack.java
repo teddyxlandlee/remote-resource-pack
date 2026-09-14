@@ -7,7 +7,6 @@ package xland.mcmod.rrp.v3;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.*;
-import net.minecraft.client.Minecraft;
 import org.apache.commons.io.function.IOSupplier;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.UnknownNullability;
@@ -222,7 +221,7 @@ public abstract class RemoteResourcePack {
         final Collection<String> set = oldPacks.getClass() == LinkedHashSet.class ? oldPacks : new LinkedHashSet<>(oldPacks);
         set.addAll(remotePackNames);
 
-        final List<String> optionsResourcePacks = Minecraft.getInstance().options.resourcePacks;
+        final List<String> optionsResourcePacks = RRPCacheRepoSource.getOptionsResourcePacks();
         final Set<String> existingPackNames = new HashSet<>(optionsResourcePacks);
         remotePackNames.forEach(s -> {
             if (!existingPackNames.contains(s)) optionsResourcePacks.add(s);

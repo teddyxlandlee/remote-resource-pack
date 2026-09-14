@@ -7,6 +7,8 @@ package xland.mcmod.rrp.v3;
 
 import com.google.gson.*;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.ClientBrandRetriever;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.*;
 import net.minecraft.server.packs.repository.Pack;
@@ -21,6 +23,44 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public record RRPCacheRepoSource(Map<String, Path> knownCaches) implements RepositorySource {
+    @Override
+    public void loadPacks(Consumer<Pack> consumer) {
+        for (Map.Entry<String, Path> entry : this.knownCaches().entrySet()) {
+            final String packId = RemoteResourcePack.packName(entry.getKey());
+            final Path zipFile = entry.getValue();
+            // pack.mcmeta force-modification was done by ZipConfigDownload
+            final Component packDescription = Component.translatable("pack.source.mod.remoteresourcepack")
+                    .append(" #")
+                    .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27)));
+            //? if > 1.20.1 {
+            Pack.ResourcesSupplier resourcesSupplier = new FilePackResources.FileResourcesSupplier(getZipFile(zipFile));
+            final Pack pack = Pack.readMetaAndCreate(
+                    new PackLocationInfo(
+                            packId,
+                            packDescription,
+                            PACK_SOURCE,
+                            Optional.empty()
+                    ),
+                    resourcesSupplier,
+                    PackType.CLIENT_RESOURCES,
+                    new PackSelectionConfig(/*required=*/false, Pack.Position.TOP, /*fixedPosition=*/false)
+            );
+            //?} else {
+            /*final Pack pack = Pack.readMetaAndCreate(
+                    packId,
+                    packDescription,
+                    /^required=^/false,
+                    (final String packName) -> new FilePackResources(packName, getZipFile(zipFile), /^isBuiltin=^/false),
+                    PackType.CLIENT_RESOURCES,
+                    Pack.Position.TOP,
+                    PACK_SOURCE
+            );
+            *///?}
+            Objects.requireNonNull(pack, () -> "Missing pack meta for " + packId);
+            consumer.accept(pack);
+        }
+    }
+
     // Description: `%s (Remote cache)`
     private static final PackSource PACK_SOURCE = PackSource.create(
             packName -> Component.translatable("pack.nameAndSource",
@@ -88,44 +128,6 @@ public record RRPCacheRepoSource(Map<String, Path> knownCaches) implements Repos
         return rootObj.toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    @Override
-    public void loadPacks(Consumer<Pack> consumer) {
-        for (Map.Entry<String, Path> entry : this.knownCaches().entrySet()) {
-            final String packId = RemoteResourcePack.packName(entry.getKey());
-            final Path zipFile = entry.getValue();
-            // pack.mcmeta force-modification was done by ZipConfigDownload
-            final Component packDescription = Component.translatable("pack.source.mod.remoteresourcepack")
-                    .append(" #")
-                    .append(packId.substring(19 /*prefix len*/, Math.min(packId.length(), 27)));
-            //? if > 1.20.1 {
-            Pack.ResourcesSupplier resourcesSupplier = new FilePackResources.FileResourcesSupplier(getZipFile(zipFile));
-            final Pack pack = Pack.readMetaAndCreate(
-                    new PackLocationInfo(
-                            packId,
-                            packDescription,
-                            PACK_SOURCE,
-                            Optional.empty()
-                    ),
-                    resourcesSupplier,
-                    PackType.CLIENT_RESOURCES,
-                    new PackSelectionConfig(/*required=*/false, Pack.Position.TOP, /*fixedPosition=*/false)
-            );
-            //?} else {
-            /*final Pack pack = Pack.readMetaAndCreate(
-                    packId,
-                    packDescription,
-                    /^required=^/false,
-                    (final String packName) -> new FilePackResources(packName, getZipFile(zipFile), /^isBuiltin=^/false),
-                    PackType.CLIENT_RESOURCES,
-                    Pack.Position.TOP,
-                    PACK_SOURCE
-            );
-            *///?}
-            Objects.requireNonNull(pack, () -> "Missing pack meta for " + packId);
-            consumer.accept(pack);
-        }
-    }
-
     static File getZipFile(Path zipFile) {
         try {
             return zipFile.toFile();
@@ -143,5 +145,13 @@ public record RRPCacheRepoSource(Map<String, Path> knownCaches) implements Repos
                 );
             }
         }
+    }
+
+    static List<String> getOptionsResourcePacks() {
+        return Minecraft.getInstance().options.resourcePacks;
+    }
+
+    static String getClientBrandName() {
+        return ClientBrandRetriever.getClientModName();
     }
 }
