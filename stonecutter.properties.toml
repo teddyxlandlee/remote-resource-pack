@@ -67,8 +67,8 @@ deps.fabric_api = "0.153.0+26.2"
 
 [neoforge."26.2.x"]
 mod.mc_compat = "[26.1,)"
-deps.neo_loader = "26.2.0.7-beta"
+deps.neo_loader = "26.2.0.88"
 
 [forge."26.2.x"]
 mod.mc_compat = "[26.1,)"
-deps.forge = "26.2-65.0.3"
+deps.forge = "26.2-65.1.0"

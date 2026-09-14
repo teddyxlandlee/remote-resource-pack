@@ -12,6 +12,7 @@ displayURL="https://modrinth.com/mod/remote-resource-pack"
 # A file name (in the root of the mod JAR) containing a logo for display
 logoFile="RRP_Icon.png"
 logoBlur=false
+iconFile="RRP_Icon.png"
 # A text field displayed in the mod UI
 #credits="Thanks for this example mod goes to Java" #optional
 # A text field displayed in the mod UI
