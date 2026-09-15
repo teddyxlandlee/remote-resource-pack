@@ -78,7 +78,7 @@ record PackRepoItem(Path repo, RemotePackConfig config) {
         final Path zipConfigEtag = zipConfigEtag();
         if (!Files.exists(zipConfigEtag)) return Optional.empty();
         try {
-            return Optional.of(Files.readString(zipConfigEtag));
+            return Optional.of(Files.readString(zipConfigEtag).strip());
         } catch (IOException e) {
             RemoteResourcePack.LOGGER.warn(MARKER, "Failed to get etag for {}", this, e);
             return Optional.empty();

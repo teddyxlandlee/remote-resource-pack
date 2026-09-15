@@ -60,7 +60,7 @@ final class ResourceCacheManager implements ResourceCacheAccess {
                 final String key, value;
                 try {
                     key = input.readUTF();
-                    value = input.readUTF();
+                    value = input.readUTF().strip();
                 } catch (EOFException e) {
                     break;
                 }
