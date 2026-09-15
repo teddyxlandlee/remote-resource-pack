@@ -34,7 +34,7 @@ public abstract class RemoteResourcePack {
     public static final String MOD_ID = "remoteresourcepack";
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     static final Logger LOGGER = LoggerFactory.getLogger(RemoteResourcePack.class);
-    private static final Marker MARKER = MarkerFactory.getMarker("RemoteResourcePack");
+    private static final Marker MARKER = MarkerFactory.getMarker("RRP/Main");
 
     // late-init
     private static volatile @UnknownNullability Map<String, Path> cacheFiles;
@@ -63,7 +63,7 @@ public abstract class RemoteResourcePack {
         try {
             cacheFiles = Collections.unmodifiableMap(cache(modsBuiltinConfigs, repo));
         } catch (IOException e) {
-            LOGGER.error("Failed to download/generate remote resource pack(s)", e);
+            LOGGER.error(MARKER, "Failed to download/generate remote resource pack(s)", e);
         }
     }
 
@@ -100,7 +100,7 @@ public abstract class RemoteResourcePack {
         extractModConfig(modConfigs, modConfigDir);
 
         // download + generate zip files
-        LOGGER.info("Downloading + generating files");
+        LOGGER.info(MARKER, "Downloading + generating files");
         final ExecutorService executorService = new ThreadPoolExecutor(
                 2, 4, 60, TimeUnit.SECONDS,
                 new ArrayBlockingQueue<>(100),
@@ -149,7 +149,7 @@ public abstract class RemoteResourcePack {
                         continue;
                     }
                 } catch (Exception e) {
-                    LOGGER.warn("Can't read config at {}. Force override.", configFile);
+                    LOGGER.warn(MARKER, "Can't read config at {}. Force override.", configFile);
                 }
             }
             // security check: file should be INSIDE modConfigDir
@@ -177,22 +177,22 @@ public abstract class RemoteResourcePack {
                     if (!Files.isRegularFile(path) || !path.toString().endsWith(".json")) return;
 
                     futures.add(CompletableFuture.runAsync(() -> {
-                        LOGGER.info("(#{}) Generating pack from {}", cc.incrementAndGet(), path);
+                        LOGGER.info(MARKER, "(#{}) Generating pack from {}", cc.incrementAndGet(), path);
 
                         final JsonObject singleConfig;
                         try (BufferedReader reader = Files.newBufferedReader(path)) {
                             singleConfig = GSON.fromJson(reader, JsonObject.class);
                         } catch (IOException | JsonParseException e) {
-                            LOGGER.error("Failed to parse config from {}", path);
+                            LOGGER.error(MARKER, "Failed to parse config from {}", path);
                             return;
                         }
 
                         try {
                             final RemotePackConfig source = RemotePackConfig.readFromJson(singleConfig);
                             cacheFilesPerHash.put(source.getHash(), source.generate(repo, cacheManager, ioWorker));
-                            LOGGER.info("Generated pack {} from {}", source.getHash(), path);
+                            LOGGER.info(MARKER, "Generated pack {} from {}", source.getHash(), path);
                         } catch (Exception e) {
-                            LOGGER.error("Failed to parse config or generate pack from {}", path, e);
+                            LOGGER.error(MARKER, "Failed to parse config or generate pack from {}", path, e);
                         }
                     }, executor));
                 });

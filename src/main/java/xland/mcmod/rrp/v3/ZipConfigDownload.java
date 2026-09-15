@@ -9,6 +9,8 @@ import com.google.common.base.Suppliers;
 import com.google.gson.*;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 import java.io.*;
 import java.net.URI;
@@ -38,6 +40,7 @@ final class ZipConfigDownload implements Closeable {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final Gson GSON = new Gson();    // for zipConfig parsing
+    private static final Marker MARKER = MarkerFactory.getMarker("RRP/ZipConfig");
 
     private ZipConfigDownload(ZipOutputStream zos, URI baseUri, ResourceCacheProvider cacheProvider, ExecutorService ioWorker) {
         this.zos = zos;
@@ -226,16 +229,16 @@ final class ZipConfigDownload implements Closeable {
         }
 
         if (response.statusCode() == 304) {     // Not Modified
-            RemoteResourcePack.LOGGER.debug("Etag matches. Loading serial cache.");
+            RemoteResourcePack.LOGGER.debug(MARKER, "Etag matches. Loading serial cache.");
             cleanupResponse(response);
             try {
                 return item.loadZipConfig();
             } catch (IOException e) {
-                RemoteResourcePack.LOGGER.warn("ZipConfig cache is malformed. Re-downloading.", e);
+                RemoteResourcePack.LOGGER.warn(MARKER, "ZipConfig cache is malformed. Re-downloading.", e);
                 return getZipConfig(item, true);
             }
         } else if (isStatusOk(response.statusCode())) {
-            RemoteResourcePack.LOGGER.debug("Cache miss. Rebuilding cache.");
+            RemoteResourcePack.LOGGER.debug(MARKER, "Cache miss. Rebuilding cache.");
             // cache etag
             response.headers().firstValue("etag")
                     .filter(ZipConfigDownload::isNotWeakEtag)

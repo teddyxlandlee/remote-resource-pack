@@ -6,6 +6,8 @@
 package xland.mcmod.rrp.v3;
 
 import org.jetbrains.annotations.Contract;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -18,6 +20,8 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 record PackRepoItem(Path repo, RemotePackConfig config) {
+    private static final Marker MARKER = MarkerFactory.getMarker("RRP/ZipCache");
+
     @Contract(pure = true)
     public Path zipCache() {
         return this.pathWithSuffix(".zip");
@@ -56,7 +60,7 @@ record PackRepoItem(Path repo, RemotePackConfig config) {
             Instant instant = RemotePackConfig.readInstant(input);
             return instant.plus(config.autoUpdate()).isBefore(Instant.now());
         } catch (Exception e) {
-            RemoteResourcePack.LOGGER.error("Can't read timestamp file {}", timestamp, e);
+            RemoteResourcePack.LOGGER.error(MARKER, "Can't read timestamp file {}", timestamp, e);
             return true;
         }
     }
@@ -76,7 +80,7 @@ record PackRepoItem(Path repo, RemotePackConfig config) {
         try {
             return Optional.of(Files.readString(zipConfigEtag));
         } catch (IOException e) {
-            RemoteResourcePack.LOGGER.warn("Failed to get etag for {}", this, e);
+            RemoteResourcePack.LOGGER.warn(MARKER, "Failed to get etag for {}", this, e);
             return Optional.empty();
         }
     }
@@ -85,7 +89,7 @@ record PackRepoItem(Path repo, RemotePackConfig config) {
         try {
             Files.writeString(zipConfigEtag(), etag);
         } catch (IOException e) {
-            RemoteResourcePack.LOGGER.warn("Failed to dump etag for {}", this, e);
+            RemoteResourcePack.LOGGER.warn(MARKER, "Failed to dump etag for {}", this, e);
             // silent ignore
         }
     }
@@ -100,7 +104,7 @@ record PackRepoItem(Path repo, RemotePackConfig config) {
         try (var output = new ObjectOutputStream(new GZIPOutputStream(Files.newOutputStream(this.zipConfigCache())))) {
             cachedZipConfig.writeTo(output);
         } catch (IOException e) {
-            RemoteResourcePack.LOGGER.warn("Failed to dump zip config cache", e);
+            RemoteResourcePack.LOGGER.warn(MARKER, "Failed to dump zip config cache", e);
         }
     }
 

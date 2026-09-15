@@ -10,6 +10,8 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 import org.jetbrains.annotations.UnmodifiableView;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 import java.io.*;
 import java.net.URI;
@@ -28,6 +30,7 @@ final class ResourceCacheManager implements ResourceCacheAccess {
     private final Path repo;
     private final Map<String, String> etags;
     private boolean isCacheDisabled;
+    private static final Marker MARKER = MarkerFactory.getMarker("RRP/FileCache");
 
     public ResourceCacheManager(Path repo) {
         this.repo = repo;
@@ -50,7 +53,7 @@ final class ResourceCacheManager implements ResourceCacheAccess {
             if (input.readInt() != ETAGS_FILE_MAGIC) {
                 // File broken
                 input.close();
-                RemoteResourcePack.LOGGER.error("Etags cache is broken");
+                RemoteResourcePack.LOGGER.error(MARKER, "Etags cache is broken");
                 return ret;
             }
             while (true) {
@@ -65,7 +68,7 @@ final class ResourceCacheManager implements ResourceCacheAccess {
             }
         } catch (IOException e) {
             isCacheDisabled = true;
-            RemoteResourcePack.LOGGER.error("Error while reading etags cache. Force disabled cache.");
+            RemoteResourcePack.LOGGER.error(MARKER, "Error while reading etags cache. Force disabled cache.");
             return new HashMap<>();
         }
         return ret;
@@ -166,7 +169,7 @@ final class ResourceCacheManager implements ResourceCacheAccess {
                         Files.deleteIfExists(oldEtag);
                     }
                 } catch (IOException e) {
-                    RemoteResourcePack.LOGGER.error("Failed to write cache for {}", zipFilePath, e);
+                    RemoteResourcePack.LOGGER.error(MARKER, "Failed to write cache for {}", zipFilePath, e);
                 }
             }, executor));
         }

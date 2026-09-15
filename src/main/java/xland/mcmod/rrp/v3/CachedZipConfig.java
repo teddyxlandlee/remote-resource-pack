@@ -15,6 +15,8 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 import org.jetbrains.annotations.Unmodifiable;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 
 import java.io.*;
 import java.net.URI;
@@ -244,6 +246,7 @@ public record CachedZipConfig(FileMap staticFiles, @Unmodifiable Map<String, Dyn
     private record RemoteFileEntry(URI uri) implements FileEntry {
         @Serial
         private static final long serialVersionUID = 1;
+        private static final Marker MARKER = MarkerFactory.getMarker("RRP/File");
 
         @Override
         public CompletableFuture<Response> fetch(FetchContext context) {
@@ -272,7 +275,7 @@ public record CachedZipConfig(FileMap staticFiles, @Unmodifiable Map<String, Dyn
                             // Do not use ResponseImpl.ofSuccessResponse(): etag not updated
                             return CompletableFuture.completedStage(Response.ofCacheStream(inputStream, uri));
                         } catch (IOException e) {
-                            RemoteResourcePack.LOGGER.warn("Failed to use cache. Re-download {}.", uri, e);
+                            RemoteResourcePack.LOGGER.warn(MARKER, "Failed to use cache. Re-download {}.", uri, e);
                             return this.fetchImpl(context, true);
                         }
                     }, context.cacheIOWorker());
