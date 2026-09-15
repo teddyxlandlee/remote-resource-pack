@@ -9,7 +9,6 @@ import com.google.common.base.Suppliers;
 import com.google.gson.*;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 import org.jetbrains.annotations.Nullable;
-import org.jetbrains.annotations.UnknownNullability;
 
 import java.io.*;
 import java.net.URI;
@@ -23,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.random.RandomGenerator;
 import java.util.zip.ZipEntry;
@@ -41,9 +39,7 @@ final class ZipConfigDownload implements Closeable {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final Gson GSON = new Gson();    // for zipConfig parsing
 
-    static final AtomicReference<@UnknownNullability ExecutorService> IO_WORKER = new AtomicReference<>();
-
-    private ZipConfigDownload(ZipOutputStream zos, URI baseUri, ResourceCacheProvider cacheProvider) {
+    private ZipConfigDownload(ZipOutputStream zos, URI baseUri, ResourceCacheProvider cacheProvider, ExecutorService ioWorker) {
         this.zos = zos;
 
         this.zipOutputWorker = Executors.newSingleThreadExecutor();
@@ -55,7 +51,7 @@ final class ZipConfigDownload implements Closeable {
         this.futures = new CopyOnWriteArrayList<>();
         this.pendingCaches = new CopyOnWriteArrayList<>();
 
-        this.fetchContext = new CachedZipConfig.FetchContextImpl(httpClient, baseUri, USER_AGENT, IO_WORKER.get(), cacheProvider);
+        this.fetchContext = new CachedZipConfig.FetchContextImpl(httpClient, baseUri, USER_AGENT, ioWorker, cacheProvider);
     }
 
     @Override
@@ -159,28 +155,28 @@ final class ZipConfigDownload implements Closeable {
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
-    static void generateZip(PackRepoItem item, ResourceCacheAccess cacheManager)
+    static void generateZip(PackRepoItem item, ResourceCacheAccess cacheManager, ExecutorService ioWorker)
             throws IOException, CompletionException {
         final RandomGenerator rng = new Random();
         //? if java: >= 25 {
         ScopedValue.where(RANDOM, rng).call(() -> {
-            internalGenerateZip(item, cacheManager);
+            internalGenerateZip(item, cacheManager, ioWorker);
             return null;
         });
         //?} else {
         /*try {
             RANDOM.set(rng);
-            internalGenerateZip(item, cacheManager);
+            internalGenerateZip(item, cacheManager, ioWorker);
         } finally {
             RANDOM.remove();    // gc
         }
         *///?}
     }
 
-    private static void internalGenerateZip(PackRepoItem item, ResourceCacheAccess cacheManager)
+    private static void internalGenerateZip(PackRepoItem item, ResourceCacheAccess cacheManager, ExecutorService ioWorker)
             throws IOException, CompletionException {
         final ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(item.zipCache()));
-        try (final ZipConfigDownload engine = new ZipConfigDownload(zos, item.config().baseUri(), cacheManager)) {
+        try (final ZipConfigDownload engine = new ZipConfigDownload(zos, item.config().baseUri(), cacheManager, ioWorker)) {
             final CachedZipConfig zipConfig = engine.getZipConfig(item);
             final Map<String, String> args = item.config().args();
 

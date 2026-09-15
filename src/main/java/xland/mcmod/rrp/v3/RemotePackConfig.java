@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
 
 public final class RemotePackConfig implements java.io.Serializable {
     private final URI baseUri;
@@ -41,9 +42,9 @@ public final class RemotePackConfig implements java.io.Serializable {
         this.hash = internalCalcSha256();
     }
 
-    public Path generate(Path repo, ResourceCacheAccess cacheManager) throws IOException, CompletionException {
+    public Path generate(Path repo, ResourceCacheAccess cacheManager, ExecutorService ioWorker) throws IOException, CompletionException {
         PackRepoItem item = new PackRepoItem(repo, this);
-        item.generate(cacheManager);
+        item.generate(cacheManager, ioWorker);
         return item.zipCache();
     }
 

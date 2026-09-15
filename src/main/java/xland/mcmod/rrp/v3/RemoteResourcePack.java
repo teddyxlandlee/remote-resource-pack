@@ -113,12 +113,7 @@ public abstract class RemoteResourcePack {
         final Map<String, Path> ret;
         boolean completed = false;
         try {
-            try {
-                ZipConfigDownload.IO_WORKER.set(executorService);
-                ret = download(repo, modConfigDir, cacheManager);
-            } finally {
-                ZipConfigDownload.IO_WORKER.set(null);
-            }
+            ret = download(repo, modConfigDir, cacheManager, executorService);
             completed = true;
         } finally {
             if (!completed) {
@@ -167,7 +162,7 @@ public abstract class RemoteResourcePack {
         }
     }
 
-    private static ConcurrentMap<String, Path> download(Path repo, Path modConfigDir, ResourceCacheManager cacheManager) throws IOException {
+    private static ConcurrentMap<String, Path> download(Path repo, Path modConfigDir, ResourceCacheManager cacheManager, ExecutorService ioWorker) throws IOException {
         final ConcurrentMap<String, Path> cacheFilesPerHash = new ConcurrentHashMap<>();
         //? if java: >= 21 {
         try (final var executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -194,7 +189,7 @@ public abstract class RemoteResourcePack {
 
                         try {
                             final RemotePackConfig source = RemotePackConfig.readFromJson(singleConfig);
-                            cacheFilesPerHash.put(source.getHash(), source.generate(repo, cacheManager));
+                            cacheFilesPerHash.put(source.getHash(), source.generate(repo, cacheManager, ioWorker));
                             LOGGER.info("Generated pack {} from {}", source.getHash(), path);
                         } catch (Exception e) {
                             LOGGER.error("Failed to parse config or generate pack from {}", path, e);

@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -60,11 +61,11 @@ record PackRepoItem(Path repo, RemotePackConfig config) {
         }
     }
 
-    public void generate(ResourceCacheAccess cacheManager) throws IOException, CompletionException {
+    public void generate(ResourceCacheAccess cacheManager, ExecutorService ioWorker) throws IOException, CompletionException {
         if (!isOutdated()) return;
         final Path zipCache = zipCache();
         Files.createDirectories(zipCache.getParent());
-        ZipConfigDownload.generateZip(this, cacheManager);
+        ZipConfigDownload.generateZip(this, cacheManager, ioWorker);
 
         dumpTimestamp();
     }
