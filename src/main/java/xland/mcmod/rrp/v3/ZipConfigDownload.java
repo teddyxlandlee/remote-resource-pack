@@ -207,13 +207,20 @@ final class ZipConfigDownload implements Closeable {
     }
 
     private CachedZipConfig getZipConfig(PackRepoItem item) throws IOException {
+        return getZipConfig(item, false);
+    }
+
+    private CachedZipConfig getZipConfig(PackRepoItem item, boolean ignoreCache) throws IOException {
         final URI uri = item.config().zipConfigUri();
         final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(uri)
                 .GET()
                 .header("User-Agent", USER_AGENT.get());
-        item.getZipConfigEtag().ifPresent(etag -> {
-            if (Files.exists(item.zipConfigCache())) requestBuilder.header("If-None-Match", etag);
-        });
+        if (!ignoreCache) {
+            item.getZipConfigEtag().ifPresent(etag -> {
+                if (Files.exists(item.zipConfigCache())) requestBuilder.header("If-None-Match", etag);
+            });
+        }
+
         HttpResponse<InputStream> response;
         try {
             response = this.httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
@@ -225,7 +232,12 @@ final class ZipConfigDownload implements Closeable {
         if (response.statusCode() == 304) {     // Not Modified
             RemoteResourcePack.LOGGER.debug("Etag matches. Loading serial cache.");
             cleanupResponse(response);
-            return item.loadZipConfig();
+            try {
+                return item.loadZipConfig();
+            } catch (IOException e) {
+                RemoteResourcePack.LOGGER.warn("ZipConfig cache is malformed. Re-downloading.", e);
+                return getZipConfig(item, true);
+            }
         } else if (isStatusOk(response.statusCode())) {
             RemoteResourcePack.LOGGER.debug("Cache miss. Rebuilding cache.");
             // cache etag

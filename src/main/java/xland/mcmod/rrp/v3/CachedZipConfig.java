@@ -5,12 +5,16 @@
  */
 package xland.mcmod.rrp.v3;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnknownNullability;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.io.*;
 import java.net.URI;
@@ -25,30 +29,38 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.random.RandomGenerator;
-import java.util.stream.Collectors;
 
-public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynamic) implements Serializable {
+public record CachedZipConfig(FileMap staticFiles, @Unmodifiable Map<String, DynamicArg> dynamic) implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    public record FileMap(Map<String, FileEntry> map) implements Serializable {
+    public CachedZipConfig {
+        Objects.requireNonNull(staticFiles);
+        dynamic = nonNullCopy(dynamic);
+    }
+
+    public record FileMap(@Unmodifiable Map<String, FileEntry> map) implements Serializable {
         @Serial
         private static final long serialVersionUID = 1L;
+
+        public FileMap {
+            map = nonNullCopy(map);
+        }
 
         public void forEach(BiConsumer<? super String, ? super FileEntry> consumer) {
             map.forEach(consumer);
         }
 
         public static FileMap fromJson(JsonObject obj) {
-            final var map = new LinkedHashMap<String, FileEntry>();
+            final ImmutableMap.Builder<String, FileEntry> builder = ImmutableMap.builderWithExpectedSize(obj.size());
             obj.asMap().forEach((key, value) -> {
                 final JsonObject fileEntryJson = value.getAsJsonObject();
                 if (shouldSkip(fileEntryJson)) return;  // do not parse/serialize this
 
                 final FileEntry fileEntry = FileEntry.fromJson(fileEntryJson);
-                map.put(key, fileEntry);
+                builder.put(key, fileEntry);
             });
-            return new FileMap(map);
+            return new FileMap(builder.build());
         }
 
         private static boolean shouldSkip(JsonObject data) {
@@ -69,9 +81,13 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
         }
     }
 
-    public record DynamicArg(int defaultIndex, List<DynamicItem> items) implements Serializable {
+    public record DynamicArg(int defaultIndex, @Unmodifiable List<DynamicItem> items) implements Serializable {
         @Serial
         private static final long serialVersionUID = 1L;
+
+        public DynamicArg {
+            items = nonNullCopy(items);
+        }
 
         private static boolean isRandom(int index) {
             return index < 0;
@@ -111,12 +127,12 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
 
             final JsonPrimitive defaultPrimitive = obj.get("default").getAsJsonPrimitive();
             final int defaultIndex = "random".equals(defaultPrimitive.getAsString()) ? -1 : defaultPrimitive.getAsInt();
-            // make it mutable deliberately
+            // behavior change since 3.0.0-beta.10: use immutable list
             final List<DynamicItem> items = obj.get("items").getAsJsonArray()
                     .asList()
                     .stream()
                     .map(e -> DynamicItem.fromJson(e.getAsJsonObject()))
-                    .collect(Collectors.toList());
+                    .toList();
             return new DynamicArg(defaultIndex, items);
         }
     }
@@ -124,6 +140,11 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
     public record DynamicItem(int weight, FileMap files) implements Serializable {
         @Serial
         private static final long serialVersionUID = 1L;
+
+        public DynamicItem {
+            Objects.requireNonNull(files);
+        }
+
         public static final int DEFAULT_WEIGHT = 100;
 
         public static DynamicItem fromJson(JsonObject obj) {
@@ -144,12 +165,13 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
         checkExistence(obj, "dynamic");
 
         final FileMap staticFiles = FileMap.fromJson(obj.get("static").getAsJsonObject());
-        final Map<String, DynamicArg> dynamic = new LinkedHashMap<>();
-        obj.get("dynamic").getAsJsonObject().asMap().forEach((key, argValue) -> {
+        JsonObject dynamicObj = obj.get("dynamic").getAsJsonObject();
+        final ImmutableMap.Builder<String, DynamicArg> dynamic = ImmutableMap.builderWithExpectedSize(dynamicObj.size());
+        dynamicObj.asMap().forEach((key, argValue) -> {
             final DynamicArg dynamicArg = DynamicArg.fromJson(argValue.getAsJsonObject());
             dynamic.put(key, dynamicArg);
         });
-        return new CachedZipConfig(staticFiles, dynamic);
+        return new CachedZipConfig(staticFiles, dynamic.build());
     }
 
     private static void checkExistence(JsonObject obj, String key) {
@@ -220,6 +242,9 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
     }
 
     private record RemoteFileEntry(URI uri) implements FileEntry {
+        @Serial
+        private static final long serialVersionUID = 1;
+
         @Override
         public CompletableFuture<Response> fetch(FetchContext context) {
             return this.fetchImpl(context, false);
@@ -303,5 +328,18 @@ public record CachedZipConfig(FileMap staticFiles, Map<String, DynamicArg> dynam
                     Optional.of(uri.toASCIIString())
             );
         }
+    }
+
+    private static <K, V> ImmutableMap<K, V> nonNullCopy(Map<? extends @UnknownNullability K, ? extends @UnknownNullability V> original) {
+        for (final var entry : original.entrySet()) {
+            Objects.requireNonNull(entry.getKey());
+            Objects.requireNonNull(entry.getValue());
+        }
+        return ImmutableMap.copyOf(original);
+    }
+
+    private static <E> ImmutableList<E> nonNullCopy(List<? extends @UnknownNullability E> original) {
+        original.forEach(Objects::requireNonNull);
+        return ImmutableList.copyOf(original);
     }
 }
