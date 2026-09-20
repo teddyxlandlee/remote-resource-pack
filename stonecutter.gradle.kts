@@ -7,7 +7,7 @@ plugins {
     id("cloud.rio.license") version "0.18.0" apply false
 }
 
-stonecutter active "26.2.x-fabric"
+stonecutter active "26.3.x-fabric"
 
 // See https://stonecutter.kikugie.dev/wiki/config/params
 stonecutter parameters {

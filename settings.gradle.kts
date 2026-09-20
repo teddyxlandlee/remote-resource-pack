@@ -15,10 +15,10 @@ pluginManagement {
 
 plugins {
     // Check the latest version on https://stonecutter.kikugie.dev/blog/changes/0.9
-    id("dev.kikugie.stonecutter") version "0.9.6"
+    id("dev.kikugie.stonecutter") version "0.9.8"
 
     // Used for cross-compat for 26.1+ and older versions (https://codeberg.org/KikuGie/loom-back-compat)
-    id("dev.kikugie.loom-back-compat") version "0.3"
+    id("dev.kikugie.loom-back-compat") version "0.4.2"
 
     // Sometimes it is needed to make Gradle run at all, so it doesn't hurt to have
     // (https://github.com/gradle/foojay-toolchains)
@@ -45,8 +45,8 @@ stonecutter {
         match("1.20.1", "forge", "fabric")
         match("1.21.1", "forge", "fabric", "neoforge")
         match("1.21.11", "forge", "fabric", "neoforge")
-        match("26.2.x", "forge", "fabric", "neoforge", version = "26.2")
-        vcsVersion = "26.2.x-fabric"
+        match("26.3.x", "forge", "fabric", "neoforge", version = "26.3")
+        vcsVersion = "26.3.x-fabric"
     }
 }
 
