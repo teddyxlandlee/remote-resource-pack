@@ -13,7 +13,6 @@ import org.jetbrains.annotations.NotNullByDefault;
 import xland.mcmod.rrp.v3.RemoteResourcePack;
 
 import java.io.BufferedReader;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
@@ -40,7 +39,7 @@ public final class RemoteResourcePackNeo extends RemoteResourcePack {
             final IOSupplier<BufferedReader> supplier;
             //? if <1.21.11 {
             /^final var path = modFile.findResource("RemoteResourcePack.json");   // java.nio.file.Path
-            if (Files.notExists(path)) return null;
+            if (java.nio.file.Files.notExists(path)) return null;
             supplier = () -> Files.newBufferedReader(path);
             ^///?} else {
             final var resource = modFile.getContents().get("RemoteResourcePack.json");
