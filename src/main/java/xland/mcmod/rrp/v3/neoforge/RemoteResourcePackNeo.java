@@ -40,7 +40,7 @@ public final class RemoteResourcePackNeo extends RemoteResourcePack {
             //? if <1.21.11 {
             /^final var path = modFile.findResource("RemoteResourcePack.json");   // java.nio.file.Path
             if (java.nio.file.Files.notExists(path)) return null;
-            supplier = () -> Files.newBufferedReader(path);
+            supplier = () -> java.nio.file.Files.newBufferedReader(path);
             ^///?} else {
             final var resource = modFile.getContents().get("RemoteResourcePack.json");
             if (resource == null) return null;  // non-exist

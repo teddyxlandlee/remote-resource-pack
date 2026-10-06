@@ -1,6 +1,3 @@
-import dev.kikugie.stonecutter.build.StonecutterBuildExtension
-import nl.javadude.gradle.plugins.license.LicenseExtension
-
 plugins {
     id("dev.kikugie.stonecutter")
 //    id("com.diffplug.spotless") version "8.8.0" apply false
@@ -47,15 +44,16 @@ stonecutter parameters {
     }
 }
 
-subprojects {
-    val projectStonecutter = project.extensions.getByType<StonecutterBuildExtension>()
-    if (projectStonecutter.current.isActive) {
-        project.plugins.apply("cloud.rio.license")
-        with(project.extensions.getByType<LicenseExtension>()) {
-            encoding = "UTF-8"
-            header = rootProject.file("HEADER.txt")
-            include("**/*.java")
-            mapping("java", "SLASHSTAR_STYLE")
-        }
-    }
-}
+/* cloud.rio.license has bug detecting copyright_year. Disable it temporarily. */
+//subprojects {
+//    val projectStonecutter = project.extensions.getByType<StonecutterBuildExtension>()
+//    if (projectStonecutter.current.isActive) {
+//        project.plugins.apply("cloud.rio.license")
+//        with(project.extensions.getByType<LicenseExtension>()) {
+//            encoding = "UTF-8"
+//            header = rootProject.file("HEADER.txt")
+//            include("**/*.java")
+//            mapping("java", "SLASHSTAR_STYLE")
+//        }
+//    }
+//}
