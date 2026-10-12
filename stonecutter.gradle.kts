@@ -1,5 +1,3 @@
-import dev.kikugie.stonecutter.build.StonecutterBuildExtension
-
 plugins {
     id("dev.kikugie.stonecutter")
     id("com.diffplug.spotless") version "8.10.4" apply false
@@ -45,22 +43,19 @@ stonecutter parameters {
     }
 }
 
-/* cloud.rio.license has bug detecting copyright_year. Disable it temporarily. */
-subprojects {
-    val projectStonecutter = project.extensions.getByType<StonecutterBuildExtension>()
-    if (projectStonecutter.current.isActive) {
-        project.plugins.apply("com.diffplug.spotless")
-        with(project.extensions.getByType<com.diffplug.gradle.spotless.SpotlessExtension>()) {
-            java {
-                licenseHeaderFile(rootProject.file("HEADER.txt"))
-//                importOrder(
-//                    "java|javax",
-//                    "xland.mcmod.rrp", "xland.mcmod",
-//                    "net.minecraft", "net.neoforged|net.fabricmc|net.minecraftforge",
-//                    ""
-//                )
-                expandWildcardImports()
-            }
+if (project === rootProject) {
+    plugins.apply("com.diffplug.spotless")
+    with(project.extensions.getByType<com.diffplug.gradle.spotless.SpotlessExtension>()) {
+        java {
+            licenseHeaderFile(rootProject.file("HEADER.txt"))
+//            importOrder(
+//                "java|javax",
+//                "xland.mcmod.rrp", "xland.mcmod",
+//                "net.minecraft", "net.neoforged|net.fabricmc|net.minecraftforge",
+//                ""
+//            )
+//            expandWildcardImports()
+            target("src/**/*.java")
         }
     }
 }
