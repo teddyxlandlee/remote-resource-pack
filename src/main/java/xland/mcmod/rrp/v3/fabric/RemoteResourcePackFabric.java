@@ -32,6 +32,7 @@ public final class RemoteResourcePackFabric extends RemoteResourcePack {
         RemoteResourcePack.init();
     }
 
+    @Override
     protected Path getGameDir() {
         return FabricLoader.getInstance()
                 .getGameDir()
@@ -39,6 +40,7 @@ public final class RemoteResourcePackFabric extends RemoteResourcePack {
                 .normalize();
     }
 
+    @Override
     protected Path getConfigDir() {
         return FabricLoader.getInstance()
                 .getConfigDir()
@@ -46,6 +48,7 @@ public final class RemoteResourcePackFabric extends RemoteResourcePack {
                 .normalize();
     }
 
+    @Override
     protected Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
         return FabricLoader.getInstance().getAllMods().stream()
                 .flatMap(c -> c.findPath("RemoteResourcePack.json").stream().map(
@@ -60,6 +63,7 @@ public final class RemoteResourcePackFabric extends RemoteResourcePack {
                 .orElseThrow(() -> new RuntimeException("Can't find " + modId + " mod?!"));
     }
 
+    @Override
     protected String modVersion() {
         return getModVersion(RemoteResourcePack.MOD_ID);
     }
@@ -69,6 +73,7 @@ public final class RemoteResourcePackFabric extends RemoteResourcePack {
         ((MutablePackRepository) packRepository).remoteResourcePack$addRepoSource(RRPCacheRepoSource.ofCached());
     }
 
+    @Override
     protected String minecraftVersion() {
         return getModVersion("minecraft");
     }

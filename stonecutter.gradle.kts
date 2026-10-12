@@ -1,7 +1,8 @@
+import dev.kikugie.stonecutter.build.StonecutterBuildExtension
+
 plugins {
     id("dev.kikugie.stonecutter")
-//    id("com.diffplug.spotless") version "8.8.0" apply false
-    id("cloud.rio.license") version "0.18.0" apply false
+    id("com.diffplug.spotless") version "8.10.4" apply false
 }
 
 stonecutter active "26.3.x-fabric"
@@ -45,15 +46,21 @@ stonecutter parameters {
 }
 
 /* cloud.rio.license has bug detecting copyright_year. Disable it temporarily. */
-//subprojects {
-//    val projectStonecutter = project.extensions.getByType<StonecutterBuildExtension>()
-//    if (projectStonecutter.current.isActive) {
-//        project.plugins.apply("cloud.rio.license")
-//        with(project.extensions.getByType<LicenseExtension>()) {
-//            encoding = "UTF-8"
-//            header = rootProject.file("HEADER.txt")
-//            include("**/*.java")
-//            mapping("java", "SLASHSTAR_STYLE")
-//        }
-//    }
-//}
+subprojects {
+    val projectStonecutter = project.extensions.getByType<StonecutterBuildExtension>()
+    if (projectStonecutter.current.isActive) {
+        project.plugins.apply("com.diffplug.spotless")
+        with(project.extensions.getByType<com.diffplug.gradle.spotless.SpotlessExtension>()) {
+            java {
+                licenseHeaderFile(rootProject.file("HEADER.txt"))
+//                importOrder(
+//                    "java|javax",
+//                    "xland.mcmod.rrp", "xland.mcmod",
+//                    "net.minecraft", "net.neoforged|net.fabricmc|net.minecraftforge",
+//                    ""
+//                )
+                expandWildcardImports()
+            }
+        }
+    }
+}

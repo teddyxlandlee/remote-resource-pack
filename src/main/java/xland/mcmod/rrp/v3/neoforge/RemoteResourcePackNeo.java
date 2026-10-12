@@ -26,14 +26,17 @@ public final class RemoteResourcePackNeo extends RemoteResourcePack {
         return INSTANCE;
     }
 
+    @Override
     public Path getGameDir() {
         return FMLPaths.GAMEDIR.get();
     }
 
+    @Override
     public Path getConfigDir() {
         return FMLPaths.CONFIGDIR.get();
     }
 
+    @Override
     public Map<String, IOSupplier<BufferedReader>> getModsBuiltinConfigs() {
         return ModList.get().applyForEachModFile(modFile -> {
             final IOSupplier<BufferedReader> supplier;
@@ -50,10 +53,12 @@ public final class RemoteResourcePackNeo extends RemoteResourcePack {
         }).filter(Objects::nonNull).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
+    @Override
     public String modVersion() {
         return Objects.requireNonNull(RemoteResourcePackNeoEntrypoint.modVersion, "modVersion uninitialized");
     }
 
+    @Override
     public String minecraftVersion() {
         return Objects.requireNonNull(ModList.get().getModFileById("minecraft"), "Minecraft not found?!").versionString();
     }
